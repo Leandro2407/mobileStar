@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
@@ -40,7 +40,11 @@ export default function Login({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
       <Image source={require('../assets/logo.png')} style={styles.logo} />
       <Text style={styles.title}>Iniciar sesión</Text>
 
@@ -79,7 +83,7 @@ export default function Login({ navigation }) {
       <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
         <Text style={styles.signUpText}>¿No tienes cuenta aún? Regístrate</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -90,6 +94,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#fff',
+    width: '100%', 
   },
   logo: {
     width: 100,
@@ -111,7 +116,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderColor: '#b9770e',
+    borderColor: '#000000', 
     marginBottom: 20,
     width: '100%',
   },
@@ -123,7 +128,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   button: {
-    backgroundColor: '#922b21',
+    backgroundColor: '#000000', 
     paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 5,
@@ -139,4 +144,3 @@ const styles = StyleSheet.create({
     color: '#007AFF',
   },
 });
-

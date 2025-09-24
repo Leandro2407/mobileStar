@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth } from '../src/config/firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -58,7 +58,11 @@ export default function SignUp({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
       <Image source={require('../assets/logo.png')} style={styles.logo} />
       <Text style={styles.title}>Regístrate</Text>
 
@@ -98,6 +102,9 @@ export default function SignUp({ navigation }) {
       </View>
 
       <Text style={styles.label}>Contraseña</Text>
+      <Text style={styles.passwordHint}>
+        Mín. 6 caracteres: Mayúscula, minúscula y número.
+      </Text>
       <View style={styles.inputContainer}>
         <FontAwesome name="lock" size={20} color="#ccc" style={styles.icon} />
         <TextInput
@@ -134,7 +141,7 @@ export default function SignUp({ navigation }) {
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.signUpText}>¿Ya tienes cuenta? Inicia sesión</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -145,6 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#fff',
+    width: '100%', // Asegura que tome el ancho completo para KeyboardAvoidingView
   },
   logo: {
     width: 100,
@@ -162,11 +170,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
   },
+  passwordHint: { // NUEVO ESTILO: Indicación de la Contraseña
+    alignSelf: 'flex-start',
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 5,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderColor: '#b9770e',
+    borderColor: '#000000', // CAMBIO: Borde de Input a Negro
     marginBottom: 20,
     width: '100%',
   },
@@ -178,7 +192,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   button: {
-    backgroundColor: '#922b21',
+    backgroundColor: '#000000', // CAMBIO: Fondo de Botón a Negro
     paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 5,
@@ -194,4 +208,3 @@ const styles = StyleSheet.create({
     color: '#007AFF',
   },
 });
-
