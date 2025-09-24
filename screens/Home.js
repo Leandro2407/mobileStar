@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#000000', // CAMBIO: Fondo de Botón a Negro
+    backgroundColor: '#000000',
     paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 5,

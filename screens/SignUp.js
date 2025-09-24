@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#fff',
-    width: '100%', // Asegura que tome el ancho completo para KeyboardAvoidingView
+    width: '100%',
   },
   logo: {
     width: 100,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
   },
-  passwordHint: { // NUEVO ESTILO: Indicación de la Contraseña
+  passwordHint: { 
     alignSelf: 'flex-start',
     fontSize: 12,
     color: '#888',
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderColor: '#000000', // CAMBIO: Borde de Input a Negro
+    borderColor: '#000000',
     marginBottom: 20,
     width: '100%',
   },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   button: {
-    backgroundColor: '#000000', // CAMBIO: Fondo de Botón a Negro
+    backgroundColor: '#000000',
     paddingVertical: 10,
     paddingHorizontal: 40,
     borderRadius: 5,
