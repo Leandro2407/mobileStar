@@ -70,6 +70,11 @@ export default function SignUp({ navigation }) {
     return () => backHandler.remove();
   }, []);
 
+  const handleNameInput = (text, setter) => {
+    const filteredText = text.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+    setter(filteredText);
+  };
+
   const handleSignUp = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       showAlert("", "Todos los campos son obligatorios.");
@@ -139,15 +144,9 @@ export default function SignUp({ navigation }) {
     </View>
   );
 
-  const NameRequirement = ({ isValid, children }) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-      <FontAwesome 
-        name={isValid ? "check-circle" : "times-circle"} 
-        size={14} 
-        color={isValid ? '#2ecc71' : '#bebebeff'} 
-        style={{ marginRight: 8 }} 
-      />
-      <Text style={[styles.requirementText, isValid && styles.validRequirement, !isValid && styles.invalidRequirement]}>
+  const InfoRequirement = ({ children }) => (
+    <View style={{ marginBottom: 3 }}>
+      <Text style={styles.infoText}>
         {children}
       </Text>
     </View>
@@ -187,17 +186,17 @@ export default function SignUp({ navigation }) {
                 placeholderTextColor="#CCCCCC"
                 autoCapitalize="words"
                 value={firstName}
-                onChangeText={setFirstName}
+                onChangeText={(text) => handleNameInput(text, setFirstName)}
                 onFocus={() => setIsFirstNameFocused(true)}
                 onBlur={() => setIsFirstNameFocused(false)}
               />
             </View>
 
-            {isFirstNameFocused && !isFirstNameValid && firstName.length > 0 && (
+            {isFirstNameFocused && (
               <View style={styles.nameRequirements}>
-                <NameRequirement isValid={isFirstNameValid}>
-                  Solo se pueden ingresar letras y espacios
-                </NameRequirement>
+                <InfoRequirement>
+                  Se permite letras (A-Z, a-z), acentos y espacios
+                </InfoRequirement>
               </View>
             )}
 
@@ -209,17 +208,17 @@ export default function SignUp({ navigation }) {
                 placeholderTextColor="#CCCCCC"
                 autoCapitalize="words"
                 value={lastName}
-                onChangeText={setLastName}
+                onChangeText={(text) => handleNameInput(text, setLastName)}
                 onFocus={() => setIsLastNameFocused(true)}
                 onBlur={() => setIsLastNameFocused(false)}
               />
             </View>
 
-            {isLastNameFocused && !isLastNameValid && lastName.length > 0 && (
+            {isLastNameFocused && (
               <View style={styles.nameRequirements}>
-                <NameRequirement isValid={isLastNameValid}>
-                  Solo se pueden ingresar letras y espacios
-                </NameRequirement>
+                <InfoRequirement>
+                  Se permite letras (A-Z, a-z), acentos y espacios
+                </InfoRequirement>
               </View>
             )}
 
@@ -241,7 +240,7 @@ export default function SignUp({ navigation }) {
             {isEmailFocused && !isEmailValid && (
               <View style={styles.emailRequirements}>
                 <EmailRequirement isValid={isEmailValid}>
-                  Ingrese un correo electrónico válido (debe contener @ y .com)
+                  Ingrese un correo electrónico válido (ejemplo@gmail.com)
                 </EmailRequirement>
               </View>
             )}
@@ -420,6 +419,11 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   requirementText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    marginBottom: 3,
+  },
+  infoText: {
     color: '#CCCCCC',
     fontSize: 14,
     marginBottom: 3,

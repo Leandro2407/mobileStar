@@ -8,6 +8,7 @@ import InitialScreen from '../screens/InitialScreen';
 import Login from '../screens/Login';
 import SignUp from '../screens/SignUp';
 import Home from '../screens/Home';
+import CreateTask from '../screens/CreateTask';
 
 const Stack = createStackNavigator();
 
@@ -61,10 +62,16 @@ function Navigation() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="CreateTask"
+          component={CreateTask}
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 export default Navigation;
-

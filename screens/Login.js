@@ -89,24 +89,12 @@ export default function Login({ navigation }) {
       await signInWithEmailAndPassword(auth, email, password);
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error) {
-      let errorMessage = "Hubo un problema al iniciar sesión.";
-      switch (error.code) {
-        case 'auth/invalid-email':
-          errorMessage = "El formato del correo electrónico no es válido.";
-          break;
-        case 'auth/wrong-password':
-          errorMessage = "La contraseña es incorrecta.";
-          break;
-        case 'auth/user-not-found':
-          errorMessage = "No se encontró un usuario con este correo.";
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = "Error de red. Por favor, comprueba tu conexión.";
-          break;
-        default:
-          console.error("Error al iniciar sesión:", error.message);
-          break;
+      let errorMessage = "Credenciales inválidas.";
+
+      if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Error de red. Por favor, comprueba tu conexión.";
       }
+
       showAlert("", errorMessage);
     }
   };
