@@ -14,7 +14,7 @@ import {
   BackHandler
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
 import { updateProfile } from 'firebase/auth';
 import CustomAlert from '../src/components/CustomAlert';
@@ -107,11 +107,14 @@ export default function SignUp({ navigation }) {
         displayName: `${firstName} ${lastName}`
       });
 
-      showAlert("", "Registro exitoso. ¡Bienvenido!");
+      // Cerrar sesión inmediatamente después del registro
+      await signOut(auth);
+
+      showAlert("Registro exitoso", "Tu cuenta ha sido creada. Por favor inicia sesión.");
       
       setTimeout(() => {
-        navigation.replace('Home');
-      }, 1500);
+        navigation.replace('Login');
+      }, 2000);
     } catch (error) {
       let errorMessage = "Hubo un problema al registrar el usuario.";
       switch (error.code) {
@@ -126,7 +129,7 @@ export default function SignUp({ navigation }) {
           break;
       }
       
-      showAlert("", errorMessage);
+      showAlert("Error", errorMessage);
     }
   };
 

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   StyleSheet, 
   Image, 
-  TextInput,
   ScrollView,
   Modal,
   StatusBar,
@@ -13,68 +12,13 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
-import { auth, db } from '../src/config/firebaseConfig';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { auth } from '../src/config/firebaseConfig';
 
 const GTH_LOGO = require('../assets/logo.png');
 const BACKGROUND_IMAGE = require('../assets/home.jpg');
 
 export default function Home({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tasks, setTasks] = useState([]);
-  const [filteredTasks, setFilteredTasks] = useState([]);
-
-  useEffect(() => {
-    const unsubscribe = loadTasks();
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredTasks(tasks);
-    } else {
-      const filtered = tasks.filter(task => 
-        task.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredTasks(filtered);
-    }
-  }, [searchQuery, tasks]);
-
-  const loadTasks = () => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.error('Usuario no autenticado');
-      return;
-    }
-
-    const tasksCollection = collection(db, `users/${userId}/tasks`);
-    const q = query(tasksCollection);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedTasks = [];
-      snapshot.forEach((doc) => {
-        loadedTasks.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      
-      loadedTasks.sort((a, b) => {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
-      
-      setTasks(loadedTasks);
-      setFilteredTasks(loadedTasks);
-    }, (error) => {
-      console.error('Error al cargar tareas:', error);
-    });
-
-    return unsubscribe;
-  };
 
   const handleLogOut = async () => {
     try {
@@ -85,55 +29,16 @@ export default function Home({ navigation }) {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'alta': return '#e74c3c';
-      case 'media': return '#f39c12';
-      case 'baja': return '#2ecc71';
-      default: return '#95a5a6';
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'iniciada': return '#3498db';
-      case 'en proceso': return '#f39c12';
-      case 'finalizada': return '#2ecc71';
-      case 'cancelada': return '#95a5a6';
-      default: return '#95a5a6';
-    }
-  };
-
-  const TaskCard = ({ task }) => (
-    <TouchableOpacity style={styles.taskCard}>
-      <View style={styles.taskHeader}>
-        <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
-        <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority) }]}>
-          <Text style={styles.badgeText}>{task.priority.toUpperCase()}</Text>
-        </View>
+  const ModuleCard = ({ icon, title, description, onPress, color }) => (
+    <TouchableOpacity style={styles.moduleCard} onPress={onPress}>
+      <View style={[styles.iconContainer, { backgroundColor: color }]}>
+        <FontAwesome name={icon} size={40} color="#FFFFFF" />
       </View>
-      
-      <View style={styles.taskInfo}>
-        <View style={styles.infoRow}>
-          <FontAwesome name="clock-o" size={14} color="#b9770e" />
-          <Text style={styles.infoText}>{task.duration}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <FontAwesome name="calendar" size={14} color="#b9770e" />
-          <Text style={styles.infoText}>{task.date}</Text>
-        </View>
+      <View style={styles.moduleInfo}>
+        <Text style={styles.moduleTitle}>{title}</Text>
+        <Text style={styles.moduleDescription}>{description}</Text>
       </View>
-
-      <View style={styles.employeesContainer}>
-        <FontAwesome name="users" size={14} color="#b9770e" />
-        <Text style={styles.employeesText} numberOfLines={1}>
-          {task.employees.join(', ')}
-        </Text>
-      </View>
-
-      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) }]}>
-        <Text style={styles.statusText}>{task.status.toUpperCase()}</Text>
-      </View>
+      <FontAwesome name="chevron-right" size={20} color="#b9770e" />
     </TouchableOpacity>
   );
 
@@ -146,7 +51,6 @@ export default function Home({ navigation }) {
         style={styles.backgroundImage}
         imageStyle={{ opacity: 0.3 }}
       >
-
         <View style={styles.navbar}>
           <TouchableOpacity 
             style={styles.menuButton}
@@ -165,52 +69,46 @@ export default function Home({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
-          <FontAwesome name="search" size={20} color="#b9770e" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar tareas..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <FontAwesome name="times-circle" size={20} color="#999" />
-            </TouchableOpacity>
-          )}
-        </View>
+        <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeText}>Bienvenido</Text>
+            <Text style={styles.welcomeSubtext}>¿Qué deseas gestionar hoy?</Text>
+          </View>
 
-        <ScrollView style={styles.tasksContainer} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>
-            {searchQuery ? 'Resultados de búsqueda' : 'Tareas pendientes'}
-          </Text>
-          
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map(task => (
-              <TaskCard key={task.id} task={task} />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <FontAwesome name="inbox" size={60} color="#666" />
-              <Text style={styles.emptyText}>
-                {searchQuery ? 'No se encontraron tareas' : 'No hay tareas pendientes'}
-              </Text>
-              {!searchQuery && (
-                <Text style={styles.emptySubtext}>
-                  Crea tu primera tarea presionando el botón +
-                </Text>
-              )}
-            </View>
-          )}
+          <View style={styles.modulesContainer}>
+            <ModuleCard
+              icon="tasks"
+              title="Tareas"
+              description="Gestiona y crea nuevas tareas"
+              color="#3498db"
+              onPress={() => navigation.navigate('CreateTask')}
+            />
+
+            <ModuleCard
+              icon="users"
+              title="Empleados"
+              description="Administra tu equipo de trabajo"
+              color="#2ecc71"
+              onPress={() => {}}
+            />
+
+            <ModuleCard
+              icon="building"
+              title="Propiedades"
+              description="Gestiona tus propiedades"
+              color="#e67e22"
+              onPress={() => {}}
+            />
+
+            <ModuleCard
+              icon="line-chart"
+              title="Seguimientos"
+              description="Realiza seguimiento de actividades"
+              color="#9b59b6"
+              onPress={() => {}}
+            />
+          </View>
         </ScrollView>
-
-        <TouchableOpacity 
-          style={styles.fabButton}
-          onPress={() => navigation.navigate('CreateTask')}
-        >
-          <FontAwesome name="plus" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </ImageBackground>
 
       <Modal
@@ -229,63 +127,61 @@ export default function Home({ navigation }) {
               <Image source={GTH_LOGO} style={styles.menuLogo} />
               <Text style={styles.menuTitle}>GTH Negocios</Text>
               <Text style={styles.menuSubtitle}>Inmobiliarios</Text>
+              <Text style={styles.userEmail}>{auth.currentUser?.email}</Text>
             </View>
 
             <View style={styles.menuItems}>
-              <Text style={styles.menuSection}>HERRAMIENTAS</Text>
-              
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => {
                   setMenuVisible(false);
-                  navigation.navigate('CreateTask');
                 }}
               >
-                <FontAwesome name="plus-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Crear nueva tarea</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
-                <FontAwesome name="tasks" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Tareas</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
-                <FontAwesome name="users" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Empleados</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
-                <FontAwesome name="building" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Propiedades</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
                 <FontAwesome name="user-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Cuenta</Text>
+                <Text style={styles.menuItemText}>Mi Perfil</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                }}
+              >
+                <FontAwesome name="bell" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Notificaciones</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                }}
+              >
+                <FontAwesome name="cog" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Configuración</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                }}
+              >
+                <FontAwesome name="question-circle" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Ayuda</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                }}
+              >
+                <FontAwesome name="info-circle" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Acerca de</Text>
               </TouchableOpacity>
 
               <View style={styles.menuDivider} />
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
-                <FontAwesome name="cog" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Ajustes</Text>
-              </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.menuItem, styles.logoutItem]}
@@ -343,143 +239,68 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#b9770e',
   },
-  searchContainer: {
-    flexDirection: 'row',
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  welcomeSection: {
+    paddingVertical: 30,
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.9)',
-    marginHorizontal: 15,
-    marginVertical: 15,
-    paddingHorizontal: 15,
-    borderRadius: 25,
-    height: 50,
   },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  tasksContainer: {
-    flex: 1,
-    paddingHorizontal: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  welcomeText: {
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 15,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
+    marginBottom: 10,
+  },
+  welcomeSubtext: {
+    fontSize: 16,
+    color: '#CCCCCC',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
-  taskCard: {
-    backgroundColor: 'rgba(26, 26, 26, 0.85)',
-    borderRadius: 12,
-    padding: 15,
+  modulesContainer: {
+    paddingBottom: 20,
+  },
+  moduleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(26, 26, 26, 0.75)',
+    borderRadius: 15,
+    padding: 20,
     marginBottom: 15,
-    elevation: 3,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(185, 119, 14, 0.2)',
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  taskName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    flex: 1,
-    marginRight: 10,
-  },
-  priorityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  taskInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoText: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  employeesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  employeesText: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    marginLeft: 8,
-    flex: 1,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: '#999',
-    fontSize: 16,
-    marginTop: 15,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  emptySubtext: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  fabButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#b9770e',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
     shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(185, 119, 14, 0.3)',
+  },
+  iconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  moduleInfo: {
+    flex: 1,
+  },
+  moduleTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  moduleDescription: {
+    fontSize: 14,
+    color: '#CCCCCC',
   },
   modalOverlay: {
     flex: 1,
@@ -487,43 +308,44 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   sideMenu: {
-    width: '70%',
-    maxWidth: 300,
+    width: '75%',
+    maxWidth: 320,
     height: '100%',
     backgroundColor: '#1a1a1a',
     paddingTop: 40,
   },
   menuHeader: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 25,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
   menuLogo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 10,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    marginBottom: 15,
+    borderWidth: 3,
+    borderColor: '#b9770e',
   },
   menuTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   menuSubtitle: {
     fontSize: 14,
     color: '#b9770e',
+    marginBottom: 10,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 5,
   },
   menuItems: {
     flex: 1,
     paddingTop: 20,
-  },
-  menuSection: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: 'bold',
-    paddingHorizontal: 20,
-    marginBottom: 10,
   },
   menuItem: {
     flexDirection: 'row',
@@ -539,11 +361,11 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: 1,
     backgroundColor: '#333',
-    marginVertical: 10,
+    marginVertical: 15,
   },
   logoutItem: {
     marginTop: 'auto',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   logoutText: {
     color: '#e74c3c',
