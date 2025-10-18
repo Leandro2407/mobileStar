@@ -159,7 +159,7 @@ export default function Home({ navigation }) {
 
           <TouchableOpacity 
             style={styles.profileButton}
-            onPress={() => {}}
+            onPress={() => navigation.navigate('Profile')}
           >
             <Image source={GTH_LOGO} style={styles.profileImage} />
           </TouchableOpacity>
@@ -271,7 +271,10 @@ export default function Home({ navigation }) {
 
               <TouchableOpacity 
                 style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate('Profile');
+                }}
               >
                 <FontAwesome name="user-circle" size={20} color="#b9770e" />
                 <Text style={styles.menuItemText}>Cuenta</Text>
