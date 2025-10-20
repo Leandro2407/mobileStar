@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   StyleSheet, 
   Image, 
-  TextInput,
   ScrollView,
   Modal,
   StatusBar,
@@ -13,127 +12,46 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
-import { auth, db } from '../src/config/firebaseConfig';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { auth } from '../src/config/firebaseConfig';
 
 const GTH_LOGO = require('../assets/logo.png');
 const BACKGROUND_IMAGE = require('../assets/home.jpg');
 
 export default function Home({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tasks, setTasks] = useState([]);
-  const [filteredTasks, setFilteredTasks] = useState([]);
+  const [logoutAlertVisible, setLogoutAlertVisible] = useState(false);
+  const [successAlertVisible, setSuccessAlertVisible] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = loadTasks();
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredTasks(tasks);
-    } else {
-      const filtered = tasks.filter(task => 
-        task.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredTasks(filtered);
-    }
-  }, [searchQuery, tasks]);
-
-  const loadTasks = () => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.error('Usuario no autenticado');
-      return;
-    }
-
-    const tasksCollection = collection(db, `users/${userId}/tasks`);
-    const q = query(tasksCollection);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedTasks = [];
-      snapshot.forEach((doc) => {
-        loadedTasks.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      
-      loadedTasks.sort((a, b) => {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
-      
-      setTasks(loadedTasks);
-      setFilteredTasks(loadedTasks);
-    }, (error) => {
-      console.error('Error al cargar tareas:', error);
-    });
-
-    return unsubscribe;
-  };
-
-  const handleLogOut = async () => {
+  const handleLogOutConfirm = async () => {
     try {
       await signOut(auth);
-      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      setLogoutAlertVisible(false);
+      setSuccessAlertVisible(true);
+      
+      setTimeout(() => {
+        setSuccessAlertVisible(false);
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      }, 2000);
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'alta': return '#e74c3c';
-      case 'media': return '#f39c12';
-      case 'baja': return '#2ecc71';
-      default: return '#95a5a6';
-    }
+  const handleLogOutRequest = () => {
+    setMenuVisible(false);
+    setLogoutAlertVisible(true);
   };
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'iniciada': return '#3498db';
-      case 'en proceso': return '#f39c12';
-      case 'finalizada': return '#2ecc71';
-      case 'cancelada': return '#95a5a6';
-      default: return '#95a5a6';
-    }
-  };
-
-  const TaskCard = ({ task }) => (
-    <TouchableOpacity style={styles.taskCard}>
-      <View style={styles.taskHeader}>
-        <Text style={styles.taskName} numberOfLines={1}>{task.name}</Text>
-        <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority) }]}>
-          <Text style={styles.badgeText}>{task.priority.toUpperCase()}</Text>
-        </View>
+  const DashboardCard = ({ icon, title, color, onPress }) => (
+    <TouchableOpacity 
+      style={[styles.dashboardCard, { borderColor: color }]}
+      onPress={onPress}
+    >
+      <View style={[styles.cardIconContainer, { backgroundColor: color + '30' }]}>
+        <FontAwesome name={icon} size={40} color={color} />
       </View>
-      
-      <View style={styles.taskInfo}>
-        <View style={styles.infoRow}>
-          <FontAwesome name="clock-o" size={14} color="#b9770e" />
-          <Text style={styles.infoText}>{task.duration}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <FontAwesome name="calendar" size={14} color="#b9770e" />
-          <Text style={styles.infoText}>{task.date}</Text>
-        </View>
-      </View>
-
-      <View style={styles.employeesContainer}>
-        <FontAwesome name="users" size={14} color="#b9770e" />
-        <Text style={styles.employeesText} numberOfLines={1}>
-          {task.employees.join(', ')}
-        </Text>
-      </View>
-
-      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) }]}>
-        <Text style={styles.statusText}>{task.status.toUpperCase()}</Text>
-      </View>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <FontAwesome name="chevron-right" size={24} color={color} />
     </TouchableOpacity>
   );
 
@@ -146,7 +64,6 @@ export default function Home({ navigation }) {
         style={styles.backgroundImage}
         imageStyle={{ opacity: 0.3 }}
       >
-
         <View style={styles.navbar}>
           <TouchableOpacity 
             style={styles.menuButton}
@@ -165,54 +82,34 @@ export default function Home({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
-          <FontAwesome name="search" size={20} color="#b9770e" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar tareas..."
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <FontAwesome name="times-circle" size={20} color="#999" />
-            </TouchableOpacity>
-          )}
-        </View>
+        <ScrollView style={styles.mainContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeText}>Bienvenido</Text>
+            <Text style={styles.welcomeSubtext}>¿Qué deseas hacer hoy?</Text>
+          </View>
 
-        <ScrollView style={styles.tasksContainer} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>
-            {searchQuery ? 'Resultados de búsqueda' : 'Tareas pendientes'}
-          </Text>
-          
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map(task => (
-              <TaskCard key={task.id} task={task} />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <FontAwesome name="inbox" size={60} color="#666" />
-              <Text style={styles.emptyText}>
-                {searchQuery ? 'No se encontraron tareas' : 'No hay tareas pendientes'}
-              </Text>
-              {!searchQuery && (
-                <Text style={styles.emptySubtext}>
-                  Crea tu primera tarea presionando el botón +
-                </Text>
-              )}
-            </View>
-          )}
+          <View style={styles.cardsContainer}>
+            <DashboardCard
+              icon="users"
+              title="Empleados"
+              color="#3498db"
+              onPress={() => {
+                // Navegar a empleados cuando esté implementado
+                console.log('Navegar a Empleados');
+              }}
+            />
+
+            <DashboardCard
+              icon="tasks"
+              title="Tareas"
+              color="#b9770e"
+              onPress={() => navigation.navigate('CreateTask')}
+            />
+          </View>
         </ScrollView>
-
-        <TouchableOpacity 
-          style={styles.fabButton}
-          onPress={() => navigation.navigate('CreateTask')}
-        >
-          <FontAwesome name="plus" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </ImageBackground>
 
+      {/* Menú lateral */}
       <Modal
         visible={menuVisible}
         transparent={true}
@@ -232,41 +129,12 @@ export default function Home({ navigation }) {
             </View>
 
             <View style={styles.menuItems}>
-              <Text style={styles.menuSection}>HERRAMIENTAS</Text>
-              
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                  navigation.navigate('CreateTask');
-                }}
-              >
-                <FontAwesome name="plus-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Crear nueva tarea</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => setMenuVisible(false)}
               >
-                <FontAwesome name="tasks" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Tareas</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
-                <FontAwesome name="users" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Empleados</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => setMenuVisible(false)}
-              >
-                <FontAwesome name="building" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Propiedades</Text>
+                <FontAwesome name="home" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Inicio</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -277,22 +145,38 @@ export default function Home({ navigation }) {
                 }}
               >
                 <FontAwesome name="user-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Cuenta</Text>
+                <Text style={styles.menuItemText}>Perfil</Text>
               </TouchableOpacity>
 
-              <View style={styles.menuDivider} />
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => setMenuVisible(false)}
+              >
+                <FontAwesome name="question-circle" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Ayuda</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => setMenuVisible(false)}
+              >
+                <FontAwesome name="info-circle" size={20} color="#b9770e" />
+                <Text style={styles.menuItemText}>Acerca de</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity 
                 style={styles.menuItem}
                 onPress={() => setMenuVisible(false)}
               >
                 <FontAwesome name="cog" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Ajustes</Text>
+                <Text style={styles.menuItemText}>Configuración</Text>
               </TouchableOpacity>
+
+              <View style={styles.menuDivider} />
 
               <TouchableOpacity 
                 style={[styles.menuItem, styles.logoutItem]}
-                onPress={handleLogOut}
+                onPress={handleLogOutRequest}
               >
                 <FontAwesome name="sign-out" size={20} color="#e74c3c" />
                 <Text style={[styles.menuItemText, styles.logoutText]}>Cerrar sesión</Text>
@@ -300,6 +184,54 @@ export default function Home({ navigation }) {
             </View>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Alerta de confirmación de cierre de sesión */}
+      <Modal
+        visible={logoutAlertVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setLogoutAlertVisible(false)}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <FontAwesome name="exclamation-circle" size={50} color="#f39c12" style={styles.alertIcon} />
+            <Text style={styles.alertTitle}>Cerrar sesión</Text>
+            <Text style={styles.alertMessage}>¿Está seguro que desea cerrar sesión?</Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.cancelButton]}
+                onPress={() => setLogoutAlertVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.confirmButton]}
+                onPress={handleLogOutConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Sí, cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Alerta de éxito al cerrar sesión */}
+      <Modal
+        visible={successAlertVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSuccessAlertVisible(false)}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <FontAwesome name="check-circle" size={50} color="#2ecc71" style={styles.alertIcon} />
+            <Text style={styles.alertTitle}>Sesión cerrada</Text>
+            <Text style={styles.alertMessage}>Se ha cerrado sesión correctamente</Text>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -346,143 +278,66 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#b9770e',
   },
-  searchContainer: {
-    flexDirection: 'row',
+  mainContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  welcomeSection: {
+    marginTop: 30,
+    marginBottom: 30,
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.9)',
-    marginHorizontal: 15,
-    marginVertical: 15,
-    paddingHorizontal: 15,
-    borderRadius: 25,
-    height: 50,
   },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  tasksContainer: {
-    flex: 1,
-    paddingHorizontal: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  welcomeText: {
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 15,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 5,
+  },
+  welcomeSubtext: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    marginTop: 8,
+    textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  taskCard: {
-    backgroundColor: 'rgba(26, 26, 26, 0.85)',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+  cardsContainer: {
+    paddingBottom: 30,
+  },
+  dashboardCard: {
+    backgroundColor: 'rgba(26, 26, 26, 0.4)',
+    borderRadius: 15,
+    padding: 25,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(185, 119, 14, 0.2)',
+    borderWidth: 2,
   },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  taskName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    flex: 1,
-    marginRight: 10,
-  },
-  priorityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  taskInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoText: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  employeesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  employeesText: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    marginLeft: 8,
-    flex: 1,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  emptyState: {
+  cardIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
   },
-  emptyText: {
-    color: '#999',
-    fontSize: 16,
-    marginTop: 15,
+  cardTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginLeft: 20,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-  },
-  emptySubtext: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  fabButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#b9770e',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -521,13 +376,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 20,
   },
-  menuSection: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: 'bold',
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -550,5 +398,64 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#e74c3c',
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertBox: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    padding: 25,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#b9770e',
+  },
+  alertIcon: {
+    marginBottom: 15,
+  },
+  alertTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  alertButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#333',
+  },
+  confirmButton: {
+    backgroundColor: '#e74c3c',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
