@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { auth } from '../src/config/firebaseConfig'; 
+import { Ionicons } from '@expo/vector-icons';
 const HouseBackground = require('../assets/Fondo.jpg');
 const Profile = ({ navigation }) => {
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
@@ -26,23 +27,19 @@ const Profile = ({ navigation }) => {
 
   const user = currentUser;
 
-  // Obtener iniciales del nombre del usuario logueado
+  // Obtener la inicial del nombre del usuario logueado
   const getInitials = () => {
     if (!user?.displayName) return 'US';
     const names = user.displayName.split(' ');
-    if (names.length >= 2) {
-      // Usamos la primera letra del primer nombre y la del último nombre
-      const lastName = names[names.length - 1]; 
-      return `${names[0][0]}${lastName[0]}`.toUpperCase();
-    }
-    return user.displayName.substring(0, 2).toUpperCase();
+    const firstName = names[0];
+    return firstName[0].toUpperCase();
   };
 
-  // Función para seleccionar imagen de la galería (Se mantiene la lógica)
+  // Función para seleccionar imagen de la galería
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
+      
       if (status !== 'granted') {
         Alert.alert('Permiso requerido', 'Se necesita acceso a la galería para cambiar la foto de perfil.');
         return;
@@ -57,6 +54,7 @@ const Profile = ({ navigation }) => {
 
       if (!result.canceled) {
         setProfileImage(result.assets[0].uri);
+        // Aquí podrías subir la imagen a Firebase Storage
         Alert.alert('Éxito', 'Foto de perfil actualizada');
       }
     } catch (error) {
@@ -64,21 +62,24 @@ const Profile = ({ navigation }) => {
     }
   };
 
-  // Opciones de menú con sus iconos (usando Emojis como alternativa)
+  // Definición del array menuItems (corregido: agregado const menuItems = [ y ];)
   const menuItems = [
     {
       label: 'Ver perfil',
-      icon: '👁️', 
+      // Aquí es donde USAS el componente Ionicons
+      icon: <Ionicons name="person-outline" size={24} color="#da7f2aff" />, 
       onPress: () => navigation.navigate('EditProfile'),
     },
     {
       label: 'Editar información',
-      icon: '✏️',
+      // Aquí también lo USAS
+      icon: <Ionicons name="create-outline" size={24} color="#da7f2aff" />, 
       onPress: () => navigation.navigate('EditInformation'),
     },
     {
       label: 'Cambiar contraseña',
-      icon: '🔐',
+      // Y aquí. Una vez que agregues esto, el warning desaparecerá.
+      icon: <Ionicons name="key-outline" size={24} color="#da7f2aff" />, 
       onPress: () => navigation.navigate('ChangePassword'),
     },
   ];
@@ -99,24 +100,31 @@ const Profile = ({ navigation }) => {
           {/* Contenido del perfil (Avatar, Nombre, Email) */}
           <View style={styles.profileContent}>
             
-            {/* Círculo de perfil o Imagen (con lógica de iniciales) */}
-            <TouchableOpacity style={styles.profileCircleContainer} onPress={pickImage}>
-              {profileImage ? (
-                // Muestra la imagen seleccionada si existe
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
-              ) : (
-                // Muestra las iniciales si no hay imagen de perfil
-                <View style={styles.initialsCircle}>
-                  <Text style={styles.initials}>{getInitials()}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            {/* Contenedor del perfil y botón de cámara */}
+            <View style={styles.profileCameraContainer}>
+              {/* Círculo de perfil o Imagen (más grande) */}
+              <TouchableOpacity style={styles.profileTouchable} onPress={pickImage}>
+                {profileImage ? (
+                  // Muestra la imagen seleccionada si existe
+                  <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                ) : (
+                  // Muestra las iniciales si no hay imagen de perfil
+                  <View style={styles.initialsCircle}>
+                    <Text style={styles.initials}>{getInitials()}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              {/* Botón de cámara al lado del icono */}
+              <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                <Ionicons name="camera" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
 
-            {/* Nombre del Usuario (Tal cual como estaba en tu código) */}
+            {/* Nombre del Usuario - Centrado */}
             <Text style={styles.name}>{user?.displayName || 'Usuario'}</Text>
-            {/* Email del Usuario (Tal cual como estaba en tu código) */}
+            {/* Email del Usuario - Centrado */}
             <Text style={styles.email}>{user?.email || 'usuario@email.com'}</Text>
-            <Text style={styles.tagline}>Perfil de usuario para la gestión inmobiliaria.</Text>
           </View>
         </ImageBackground>
 
@@ -150,7 +158,7 @@ const Profile = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a', // Fondo oscuro general para modo oscuro
+    backgroundColor: '#000000', // Fondo oscuro general para modo oscuro
   },
   scrollContent: {
     paddingBottom: 20,
@@ -167,7 +175,7 @@ const styles = StyleSheet.create({
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
     // Overlay oscuro con transparencia para mantener el modo oscuro sobre la imagen
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', 
+    backgroundColor: 'rgba(0, 0, 0, 0.2)', 
   },
   profileContent: {
     alignItems: 'center',
@@ -175,22 +183,29 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   
-  // --- Círculo de Perfil / Avatar ---
-  profileCircleContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  // --- Contenedor del perfil y cámara ---
+  profileCameraContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  
+  // --- Círculo de Perfil / Avatar (más grande) ---
+  profileTouchable: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
     borderWidth: 4,
-    borderColor: '#94a3b8', // Borde gris claro para destacar
+    borderColor: '#000000',
     overflow: 'hidden',
   },
   initialsCircle: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#b9770e', // Color original de tu código (Dorado/Naranja)
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -200,35 +215,63 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   initials: {
-    fontSize: 30,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  
-  // --- Texto de Usuario (Blanco sobre fondo oscuro) ---
+  // --- Círculo de Perfil / Avatar ---
+profileCircleContainer: {
+  // ... (otros estilos)
+  position: 'relative', // IMPORTANTE: Necesitas position: 'relative' aquí
+  // ... (otros estilos)
+  overflow: 'hidden',
+},
+// --- Botón de cámara (CORREGIDO para la esquina inferior derecha) ---
+cameraButton: {
+  position: 'absolute', // Usar posición absoluta
+  bottom: 0,           // Pegado al borde inferior
+  right: 0,            // Pegado al borde derecho
+  backgroundColor: '#da7f2a', // Color del botón
+  borderRadius: 15,          // Hacerlo más pequeño y circular (ajustado a 15)
+  width: 30,                 // Ancho más pequeño
+  height: 30,                // Altura más pequeña
+  justifyContent: 'center',
+  alignItems: 'center',
+  // Elimina marginLeft y marginTop que lo movían fuera
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 3,
+},
+  // --- Texto de Usuario (Centrado) ---
   name: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#ffffff', 
     marginTop: 10,
+    textAlign: 'center',
+    width: '100%',
   },
   email: {
     fontSize: 16,
-    color: '#cbd5e1', // Gris claro
+    color: '#cbd5e1',
     textAlign: 'center',
+    width: '100%',
   },
   tagline: {
-    fontSize: 12,
-    color: '#94a3b8', 
+    fontSize: 14,
+    color: '#cbd5e1',
+    textAlign: 'center',
     marginTop: 5,
-    fontStyle: 'italic',
+    width: '100%',
   },
 
   // --- Sección de Menú (Estilo Tarjeta Flotante) ---
   menuSection: {
-    backgroundColor: '#ffffff', // Fondo blanco de la tarjeta
+    backgroundColor: '#000000',
     marginHorizontal: 16,
-    marginTop: 0, 
+    marginTop: 30, 
     borderRadius: 15,
     overflow: 'hidden',
     elevation: 8, 
@@ -236,7 +279,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    paddingVertical: 10, 
+    paddingVertical: 11, 
   },
   menuItem: {
     flexDirection: 'row',
@@ -253,29 +296,28 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 10,
-    backgroundColor: '#f3f4f6', // Fondo suave para el icono
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
   menuIconText: {
-    fontSize: 20, // Emoji más grande
+    fontSize: 20,
   },
   menuText: {
     fontSize: 16,
-    color: '#333333',
+    color: '#575757ff',
     fontWeight: '500',
   },
   chevron: {
     fontSize: 20,
-    color: '#9ca3af', // Gris para la flecha
+    color: '#9ca3af',
     fontWeight: '300',
   },
   separator: {
     height: 1,
-    backgroundColor: '#f3f4f6', // Separador sutil
+    backgroundColor: '#f3f4f6',
     marginHorizontal: 20,
   },
 });
-
 export default Profile;

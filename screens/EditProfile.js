@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-// Asegúrate de que estas rutas a Firebase sean correctas
 import { auth, db } from '../src/config/firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
-import { FontAwesome } from '@expo/vector-icons'; // Usamos FontAwesome para el ícono
+import { FontAwesome } from '@expo/vector-icons'; 
 
 const EditProfile = ({ navigation }) => {
   const user = auth.currentUser;
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Efecto para escuchar la navegación y recargar datos (simula onFocus)
+  
   useEffect(() => {
-    // Si usas React Navigation v5/v6, podrías usar useFocusEffect de @react-navigation/native
+    
     const unsubscribe = navigation.addListener('focus', () => {
       loadUserData();
     });
@@ -163,7 +162,7 @@ const styles = StyleSheet.create({
   // --- Colores y Layout Principal ---
   container: {
     flex: 1,
-    backgroundColor: '#1f2937', // Fondo modo oscuro
+    backgroundColor: '#000000', // Fondo modo oscuro
   },
   loadingContainer: {
     flex: 1,
@@ -180,13 +179,13 @@ const styles = StyleSheet.create({
   // --- Estilos del Header (similar a la imagen) ---
   header: {
     paddingBottom: 20,
-    backgroundColor: '#1f2937', // Fondo oscuro
+    backgroundColor: '#000000', // Fondo oscuro
     overflow: 'hidden',
   },
   backgroundImagePlaceholder: {
     // Simula la franja de fondo verde de la imagen, pero en naranja oscuro
     height: 150, 
-    backgroundColor: '#374151', 
+    backgroundColor: '#b4753aff', 
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     position: 'absolute',
@@ -207,7 +206,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#b9770e', // Color principal naranja/dorado
+    backgroundColor: '#000000', // Color principal naranja/dorado
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -242,7 +241,7 @@ const styles = StyleSheet.create({
   // --- Separador ---
   separator: {
     height: 1,
-    backgroundColor: '#374151', // Separador sutil oscuro
+    backgroundColor: '#000000', // Separador sutil oscuro
     marginHorizontal: 20,
     marginVertical: 10,
   },
@@ -264,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     paddingBottom: 5,
     borderBottomWidth: 1, // Separador sutil para cada item
-    borderBottomColor: '#374151',
+    borderBottomColor: '#000000',
   },
   infoLabel: {
     fontSize: 12,

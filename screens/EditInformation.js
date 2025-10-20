@@ -9,9 +9,8 @@ import {
   Alert,
   Modal,
   TouchableWithoutFeedback,
-  ActivityIndicator, // Indicador de carga
+  ActivityIndicator, 
 } from 'react-native';
-// Asegúrate de que estas rutas a Firebase sean correctas
 import { auth, db } from '../src/config/firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { FontAwesome } from '@expo/vector-icons';
@@ -92,7 +91,26 @@ const EditInformation = ({ navigation }) => {
       }
     } catch (error) {
       console.log('Error cargando datos:', error);
-      Alert.alert('Error de carga', 'No se pudieron obtener los datos de usuario.');
+      // ELIMINADO: Alert.alert('Error de carga', 'No se pudieron obtener los datos de usuario.');
+      // En lugar de mostrar alerta, simplemente usamos datos por defecto
+      const emailFromAuth = user.email || '';
+      let nombreInicial = '';
+      let apellidoInicial = '';
+
+      if (user.displayName) {
+        const names = user.displayName.split(' ');
+        nombreInicial = names[0] || '';
+        apellidoInicial = names.slice(1).join(' ') || '';
+      }
+
+      setFormData({
+        nombre: nombreInicial,
+        apellido: apellidoInicial,
+        telefono: '',
+        fechaNacimiento: '',
+        ciudad: '',
+        email: emailFromAuth
+      });
     } finally {
       setLoading(false);
     }
@@ -280,11 +298,11 @@ const styles = StyleSheet.create({
   // --- Contenedores y Carga ---
   container: {
     flex: 1,
-    backgroundColor: '#1f2937', // Fondo modo oscuro
+    backgroundColor: '#000000', // Fondo modo oscuro
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#1f2937',
+    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
