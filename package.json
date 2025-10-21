@@ -15,6 +15,7 @@
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-community/masked-view": "^0.1.11",
     "@react-navigation/bottom-tabs": "^7.4.7",
     "@react-navigation/drawer": "^7.5.8",
     "@react-navigation/native": "^7.1.17",
@@ -27,13 +28,23 @@
     "expo-image-picker": "~17.0.8",
     "expo-status-bar": "~3.0.8",
     "expo-video": "~3.0.11",
+<<<<<<< HEAD
+    "firebase": "^12.4.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-native": "^0.81.4",
+    "react-native-gesture-handler": "^2.28.0",
+    "react-native-reanimated": "~4.1.1",
+=======
     "firebase": "^12.3.0",
+    "navigation": "^6.3.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
+>>>>>>> 9b4188aa5348e7303bfa05ef147a9ee905a1170b
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "^0.21.1"
   },
   "private": true
 }
