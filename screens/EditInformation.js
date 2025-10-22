@@ -6,20 +6,20 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView, 
-  Alert,
   Modal,
   TouchableWithoutFeedback,
-  ActivityIndicator, 
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { auth, db } from '../src/config/firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { FontAwesome } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import CustomAlert from '../src/components/CustomAlert';
 
 const EditInformation = ({ navigation }) => {
   const user = auth.currentUser;
   
-  // 1. Inicializa el email con el valor de auth
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -29,14 +29,20 @@ const EditInformation = ({ navigation }) => {
     email: user?.email || '' 
   });
 
-  const [loading, setLoading] = useState(true); // Empezamos en carga
+  const [loading, setLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
 
-  // Cargar datos del usuario
   useEffect(() => {
     loadUserData();
   }, []);
+
+  const showAlert = (title, message) => {
+    setAlertConfig({ title, message });
+    setAlertVisible(true);
+  };
 
   const loadUserData = async () => {
     if (!user) {
@@ -52,7 +58,6 @@ const EditInformation = ({ navigation }) => {
       let nombreInicial = '';
       let apellidoInicial = '';
 
-      // Intenta obtener nombre y apellido del displayName de Auth
       if (user.displayName) {
           const names = user.displayName.split(' ');
           nombreInicial = names[0] || '';
@@ -62,7 +67,6 @@ const EditInformation = ({ navigation }) => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Prioriza datos de Firestore, usa Auth como fallback si están vacíos
         setFormData({
           nombre: userData.nombre || nombreInicial,
           apellido: userData.apellido || apellidoInicial,
@@ -72,14 +76,11 @@ const EditInformation = ({ navigation }) => {
           email: emailFromAuth
         });
         
-        // Si hay fecha de nacimiento guardada (formato dd/mm/aaaa), establecerla en el picker
         if (userData.fechaNacimiento) {
           const [day, month, year] = userData.fechaNacimiento.split('/');
-          // Meses en JS son 0-indexados (Enero=0)
           setSelectedDate(new Date(year, month - 1, day)); 
         }
       } else {
-        // 2. Si no existe en Firestore, usa solo datos de auth.currentUser
         setFormData({
           nombre: nombreInicial,
           apellido: apellidoInicial,
@@ -91,8 +92,6 @@ const EditInformation = ({ navigation }) => {
       }
     } catch (error) {
       console.log('Error cargando datos:', error);
-      // ELIMINADO: Alert.alert('Error de carga', 'No se pudieron obtener los datos de usuario.');
-      // En lugar de mostrar alerta, simplemente usamos datos por defecto
       const emailFromAuth = user.email || '';
       let nombreInicial = '';
       let apellidoInicial = '';
@@ -116,40 +115,45 @@ const EditInformation = ({ navigation }) => {
     }
   };
 
-  // Manejar cambio de fecha
   const onDateChange = (event, date) => {
-    // Si la plataforma es Android, el picker se cierra al seleccionar
-    if (event.type === 'set') {
-        if (date) {
-            setSelectedDate(date);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear();
-            setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
-        }
-        setShowDatePicker(false);
-    } else if (event.type === 'dismissed') {
-        setShowDatePicker(false);
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (event.type === 'set' && date) {
+        setSelectedDate(date);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
+      }
+    } else {
+      if (date) {
+        setSelectedDate(date);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
+      }
     }
-    // En iOS, el modal debe cerrarse con el botón 'Aceptar'
   };
 
-  // Guardar datos
+  const handleDatePickerConfirm = () => {
+    setShowDatePicker(false);
+  };
+
   const handleSave = async () => {
     if (!user) {
-      Alert.alert('Error', 'No hay usuario logueado');
+      showAlert('', 'No hay usuario logueado');
       return;
     }
 
     if (!formData.nombre || !formData.apellido) {
-      Alert.alert('Error', 'Nombre y apellido son obligatorios');
+      showAlert('', 'Nombre y apellido son obligatorios');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Guardar en Firestore
       await setDoc(doc(db, 'users', user.uid), {
         nombre: formData.nombre,
         apellido: formData.apellido,
@@ -160,12 +164,11 @@ const EditInformation = ({ navigation }) => {
         updatedAt: new Date(),
       }, { merge: true });
 
-      Alert.alert('Éxito', 'Datos guardados correctamente', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      showAlert('Éxito', 'Datos guardados correctamente');
+      setTimeout(() => navigation.goBack(), 1500);
       
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron guardar los datos: ' + error.message);
+      showAlert('', 'No se pudieron guardar los datos');
     } finally {
       setLoading(false);
     }
@@ -185,69 +188,80 @@ const EditInformation = ({ navigation }) => {
 
       <View style={styles.formSection}>
         {/* Nombre */}
-        <Text style={styles.sectionTitle}>Nombre</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={formData.nombre}
-          onChangeText={(text) => setFormData({...formData, nombre: text})}
-          placeholder="Tu nombre"
-          placeholderTextColor="#9ca3af" 
-        />
+        <Text style={styles.label}>Nombre</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome name="user" size={18} color="#b9770e" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            value={formData.nombre}
+            onChangeText={(text) => setFormData({...formData, nombre: text})}
+            placeholder="Tu nombre"
+            placeholderTextColor="#666666"
+          />
+        </View>
 
         {/* Apellido */}
-        <Text style={styles.sectionTitle}>Apellido</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={formData.apellido}
-          onChangeText={(text) => setFormData({...formData, apellido: text})}
-          placeholder="Tu apellido"
-          placeholderTextColor="#9ca3af"
-        />
+        <Text style={styles.label}>Apellido</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome name="user" size={18} color="#b9770e" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            value={formData.apellido}
+            onChangeText={(text) => setFormData({...formData, apellido: text})}
+            placeholder="Tu apellido"
+            placeholderTextColor="#666666"
+          />
+        </View>
 
         {/* Teléfono */}
-        <Text style={styles.sectionTitle}>Teléfono</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={formData.telefono}
-          onChangeText={(text) => setFormData({...formData, telefono: text})}
-          placeholder="Número de teléfono"
-          placeholderTextColor="#9ca3af"
-          keyboardType="phone-pad"
-        />
+        <Text style={styles.label}>Teléfono</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome name="phone" size={18} color="#b9770e" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            value={formData.telefono}
+            onChangeText={(text) => setFormData({...formData, telefono: text})}
+            placeholder="Número de teléfono"
+            placeholderTextColor="#666666"
+            keyboardType="phone-pad"
+          />
+        </View>
 
-        {/* Fecha de Nacimiento (con ícono y TouchableOpacity para abrir calendario) */}
-        <Text style={styles.sectionTitle}>Fecha de Nacimiento</Text>
+        {/* Fecha de Nacimiento */}
+        <Text style={styles.label}>Fecha de Nacimiento</Text>
         <TouchableOpacity 
-          style={styles.inputTouchable} // Estilo diferente para el Touchable
+          style={styles.inputContainer}
           onPress={() => setShowDatePicker(true)}
         >
+          <FontAwesome name="calendar" size={18} color="#b9770e" style={styles.inputIcon} />
           <Text style={formData.fechaNacimiento ? styles.inputText : styles.placeholderText}>
             {formData.fechaNacimiento || 'dd/mm/aaaa'}
           </Text>
-          <FontAwesome name="calendar" size={20} color="#b9770e" />
         </TouchableOpacity>
 
         {/* Ciudad */}
-        <Text style={styles.sectionTitle}>Ciudad</Text>
-        <TextInput
-          style={[styles.input, styles.textInput]}
-          value={formData.ciudad}
-          onChangeText={(text) => setFormData({...formData, ciudad: text})}
-          placeholder="Tu ciudad"
-          placeholderTextColor="#9ca3af"
-        />
+        <Text style={styles.label}>Ciudad</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome name="map-marker" size={18} color="#b9770e" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            value={formData.ciudad}
+            onChangeText={(text) => setFormData({...formData, ciudad: text})}
+            placeholder="Tu ciudad"
+            placeholderTextColor="#666666"
+          />
+        </View>
 
         {/* Email - NO EDITABLE */}
-        <Text style={styles.sectionTitle}>Email</Text>
-        <View style={[styles.inputTouchable, styles.disabledInput]}>
+        <Text style={styles.label}>Email</Text>
+        <View style={[styles.inputContainer, styles.disabledInput]}>
+          <FontAwesome name="envelope" size={18} color="#666666" style={styles.inputIcon} />
           <Text style={styles.disabledInputText}>{formData.email}</Text>
         </View>
-        <Text style={styles.helperText}>Este campo no se puede modificar (tomado del registro inicial)</Text>
+        <Text style={styles.helperText}>Este campo no se puede modificar</Text>
       </View>
 
-      <View style={styles.separator} />
-
-      {/* Botón Guardar Datos */}
+      {/* Botón Guardar */}
       <TouchableOpacity 
         style={[styles.saveButton, loading && styles.disabledButton]} 
         onPress={handleSave}
@@ -266,39 +280,48 @@ const EditInformation = ({ navigation }) => {
           visible={showDatePicker}
           onRequestClose={() => setShowDatePicker(false)}
         >
-          <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+          <TouchableWithoutFeedback onPress={() => Platform.OS === 'ios' && setShowDatePicker(false)}>
             <View style={styles.modalOverlay}>
-              <View style={styles.datePickerContainer}>
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                  locale="es-ES"
-                  // iOS muestra botones, Android no
-                />
-                {/* Botón de Aceptar solo necesario para cerrar el modal en iOS/Web */}
-                <TouchableOpacity 
-                  style={styles.datePickerButton}
-                  onPress={() => setShowDatePicker(false)}
-                >
-                  <Text style={styles.datePickerButtonText}>Aceptar</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableWithoutFeedback>
+                <View style={styles.datePickerContainer}>
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onDateChange}
+                    maximumDate={new Date()}
+                    locale="es-ES"
+                    textColor="#ffffff"
+                  />
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity 
+                      style={styles.datePickerButton}
+                      onPress={handleDatePickerConfirm}
+                    >
+                      <Text style={styles.datePickerButtonText}>Aceptar</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </TouchableWithoutFeedback>
             </View>
           </TouchableWithoutFeedback>
         </Modal>
       )}
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => setAlertVisible(false)}
+      />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  // --- Contenedores y Carga ---
   container: {
     flex: 1,
-    backgroundColor: '#000000', // Fondo modo oscuro
+    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
@@ -313,115 +336,101 @@ const styles = StyleSheet.create({
   },
   formSection: {
     padding: 20,
-    paddingTop: 5,
   },
-  sectionTitle: {
-    fontSize: 16,
+  label: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#f3f4f6', // Texto en blanco/gris claro
+    color: '#ffffff',
     marginBottom: 8,
     marginTop: 15,
   },
-  
-  // --- Estilos de Input Base (para TouchableOpacity) ---
-  inputTouchable: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#4b5563', 
-    borderRadius: 12, 
+    backgroundColor: '#1a1a1a',
+    borderWidth: 2,
+    borderColor: '#b9770e',
+    borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 12,
-    backgroundColor: '#374151', 
     minHeight: 50,
   },
-
-  // --- Estilos de Input para TextInput (se extienden del base) ---
+  inputIcon: {
+    marginRight: 12,
+  },
   input: {
-    paddingVertical: 12, // Mantener el padding
-  },
-  textInput: {
-    color: '#ffffff', // Color del texto escrito
-  },
-
-  inputText: {
-    fontSize: 16,
-    color: '#ffffff', 
     flex: 1,
+    color: '#ffffff',
+    fontSize: 16,
+  },
+  inputText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#ffffff',
   },
   placeholderText: {
-    fontSize: 16,
-    color: '#9ca3af', // Placeholder gris
     flex: 1,
+    fontSize: 16,
+    color: '#666666',
   },
-  
-  // --- Estilos de Input Deshabilitado ---
   disabledInput: {
-    backgroundColor: '#4b5563', 
-    borderColor: '#4b5563',
+    backgroundColor: '#1a1a1a',
+    borderColor: '#333333',
   },
   disabledInputText: {
-    fontSize: 16,
-    color: '#d1d5db', 
     flex: 1,
+    fontSize: 16,
+    color: '#666666',
   },
   helperText: {
     fontSize: 12,
-    color: '#9ca3af', 
+    color: '#666666',
     marginTop: 5,
-    fontStyle: 'italic',
-  },
-
-  // --- Botón y Separador ---
-  separator: {
-    height: 1,
-    backgroundColor: '#374151', 
-    marginHorizontal: 20,
-    marginVertical: 20,
+    marginLeft: 5,
   },
   saveButton: {
-    backgroundColor: '#b9770e', // Color principal
+    backgroundColor: '#b9770e',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     marginHorizontal: 20,
-    marginBottom: 30,
-    shadowColor: '#b9770e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
+    marginVertical: 30,
+    borderWidth: 2,
+    borderColor: '#b9770e',
   },
   disabledButton: {
-    backgroundColor: '#6b7280', 
-    shadowColor: 'transparent',
-    elevation: 0,
+    backgroundColor: '#666666',
+    borderColor: '#666666',
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
-  // --- Estilos del Modal del Calendario ---
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', 
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'flex-end',
   },
   datePickerContainer: {
-    backgroundColor: '#1f2937', 
+    backgroundColor: '#1a1a1a',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderRightWidth: 3,
+    borderColor: '#b9770e',
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
   },
   datePickerButton: {
     backgroundColor: '#b9770e',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 15,
+    borderWidth: 2,
+    borderColor: '#b9770e',
   },
   datePickerButtonText: {
     color: '#fff',

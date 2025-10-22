@@ -1,161 +1,181 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons'; // Importa íconos de FontAwesome para los requisitos y ojos
+import { FontAwesome } from '@expo/vector-icons';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { auth } from '../src/config/firebaseConfig';
 
 const ChangePassword = () => {
-  // Estados para manejar los valores de los campos de contraseña
   const [passwords, setPasswords] = useState({
-    currentPassword: '', // Contraseña actual del usuario
-    newPassword: '', // Nueva contraseña que quiere establecer
-    confirmPassword: '' // Confirmación de la nueva contraseña
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
   
-  // Estados para controlar la visibilidad de las contraseñas (ícono de ojo)
-  const [showNewPassword, setShowNewPassword] = useState(false); // Muestra/oculta la nueva contraseña
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Muestra/oculta la confirmación de contraseña
-  
-  // Estados para saber si los campos están enfocados (para mostrar requisitos)
-  const [isNewPasswordFocused, setIsNewPasswordFocused] = useState(false); // Si el campo de nueva contraseña está enfocado
-  const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false); // Si el campo de confirmación está enfocado
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isNewPasswordFocused, setIsNewPasswordFocused] = useState(false);
+  const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
 
-  // Validaciones para la nueva contraseña (basadas en requisitos de seguridad)
-  const isLengthValid = passwords.newPassword.length >= 8; // Debe tener al menos 8 caracteres
-  const hasUpperCase = /[A-Z]/.test(passwords.newPassword); // Debe tener al menos una mayúscula
-  const hasLowerCase = /[a-z]/.test(passwords.newPassword); // Debe tener al menos una minúscula
-  const hasNumber = /\d/.test(passwords.newPassword); // Debe tener al menos un número
-  const allRequirementsMet = isLengthValid && hasUpperCase && hasLowerCase && hasNumber; // Todos los requisitos deben cumplirse
+  // Validaciones
+  const isLengthValid = passwords.newPassword.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(passwords.newPassword);
+  const hasLowerCase = /[a-z]/.test(passwords.newPassword);
+  const hasNumber = /\d/.test(passwords.newPassword);
+  const allRequirementsMet = isLengthValid && hasUpperCase && hasLowerCase && hasNumber;
+  const passwordsMatch = passwords.newPassword === passwords.confirmPassword && passwords.confirmPassword.length > 0;
 
-  // Validación para confirmar que las contraseñas coinciden
-  const passwordsMatch = passwords.newPassword === passwords.confirmPassword && passwords.confirmPassword.length > 0; // Las contraseñas deben ser iguales y no vacías
-
-  // Función que maneja el cambio de contraseña
-  const handleChangePassword = () => {
-    // Verifica que todos los campos estén llenos
+  const handleChangePassword = async () => {
     if (!passwords.currentPassword || !passwords.newPassword || !passwords.confirmPassword) {
       Alert.alert('Error', 'Todos los campos son obligatorios.');
       return;
     }
-    // Verifica que la nueva contraseña cumpla con los requisitos
     if (!allRequirementsMet) {
       Alert.alert('Error', 'La nueva contraseña debe cumplir con todos los requisitos de seguridad.');
       return;
     }
-    // Verifica que las contraseñas coincidan
     if (!passwordsMatch) {
       Alert.alert('Error', 'Las contraseñas no coinciden.');
       return;
     }
-    // Aquí iría la lógica para cambiar contraseña en Firebase (por ahora solo muestra alerta de éxito)
-    Alert.alert('Éxito', 'Contraseña cambiada correctamente');
+
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Error', 'No se ha encontrado un usuario.');
+      return;
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(user.email, passwords.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, passwords.newPassword);
+
+      Alert.alert('Éxito', 'Contraseña cambiada correctamente');
+
+      setPasswords({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+    } catch (error) {
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert('Error', 'La contraseña actual es incorrecta.');
+      } else if (error.code === 'auth/invalid-credential') {
+        Alert.alert('Error', 'La contraseña actual es incorrecta.');
+      } else {
+        Alert.alert('Error', 'Ocurrió un error al cambiar la contraseña. Inténtalo de nuevo.');
+      }
+      console.log(error);
+    }
   };
 
-  // Componente para mostrar un requisito de contraseña con ícono de check o times
+  // COMPONENTE CORREGIDO: PasswordRequirement
   const PasswordRequirement = ({ isValid, children }) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+    <View style={styles.requirementRow}>
       <FontAwesome 
-        name={isValid ? "check-circle" : "times-circle"} // Ícono verde si válido, gris si no
+        name={isValid ? "check-circle" : "times-circle"}
         size={14} 
         color={isValid ? '#2ecc71' : '#bebebeff'} 
-        style={{ marginRight: 8 }} 
+        style={styles.requirementIcon}
       />
       <Text style={[styles.requirementText, isValid && styles.validRequirement, !isValid && styles.invalidRequirement]}>
-        {children} {/* Texto del requisito */}
+        {children}
       </Text>
     </View>
   );
 
-  // Componente para mostrar el requisito de coincidencia de contraseñas
+  // COMPONENTE CORREGIDO: ConfirmRequirement
   const ConfirmRequirement = ({ isValid, children }) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+    <View style={styles.requirementRow}>
       <FontAwesome 
-        name={isValid ? "check-circle" : "times-circle"} // Ícono verde si coinciden, gris si no
+        name={isValid ? "check-circle" : "times-circle"}
         size={14} 
         color={isValid ? '#2ecc71' : '#bebebeff'} 
-        style={{ marginRight: 8 }} 
+        style={styles.requirementIcon}
       />
       <Text style={[styles.requirementText, isValid && styles.validRequirement, !isValid && styles.invalidRequirement]}>
-        {children} {/* Texto del requisito */}
+        {children}
       </Text>
     </View>
   );
 
   return (
-    <ScrollView style={styles.container}> {/* Contenedor principal con scroll para pantallas pequeñas */}
-      <View style={styles.section}> {/* Sección principal con padding */}
-        <Text style={styles.sectionTitle}>Cambiar Contraseña</Text> {/* Título de la pantalla */}
+    <ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Cambiar Contraseña</Text>
         
-        {/* Campo para la contraseña actual */}
-        <View style={styles.inputGroup}> {/* Grupo de input con ícono y campo */}
-          <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} /> {/* Ícono de candado */}
+        {/* Contraseña Actual */}
+        <View style={styles.inputGroup}>
+          <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            placeholder="Contraseña Actual" // Texto placeholder
-            placeholderTextColor="#CCCCCC" // Color del placeholder
-            secureTextEntry // Oculta el texto (puntos)
-            value={passwords.currentPassword} // Valor del estado
-            onChangeText={(text) => setPasswords({...passwords, currentPassword: text})} // Actualiza el estado
+            placeholder="Contraseña Actual"
+            placeholderTextColor="#CCCCCC"
+            secureTextEntry
+            value={passwords.currentPassword}
+            onChangeText={(text) => setPasswords({...passwords, currentPassword: text})}
           />
         </View>
         
-        {/* Campo para la nueva contraseña */}
-        <View style={styles.inputGroup}> {/* Grupo de input con ícono, campo y ojo */}
-          <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} /> {/* Ícono de candado */}
+        {/* Nueva Contraseña */}
+        <View style={styles.inputGroup}>
+          <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            placeholder="Nueva Contraseña" // Texto placeholder
-            placeholderTextColor="#CCCCCC" // Color del placeholder
-            secureTextEntry={!showNewPassword} // Oculta si no se muestra
-            value={passwords.newPassword} // Valor del estado
-            onChangeText={(text) => setPasswords({...passwords, newPassword: text})} // Actualiza el estado
-            onFocus={() => setIsNewPasswordFocused(true)} // Marca como enfocado para mostrar requisitos
-            onBlur={() => setIsNewPasswordFocused(false)} // Desmarca al salir
+            placeholder="Nueva Contraseña"
+            placeholderTextColor="#CCCCCC"
+            secureTextEntry={!showNewPassword}
+            value={passwords.newPassword}
+            onChangeText={(text) => setPasswords({...passwords, newPassword: text})}
+            onFocus={() => setIsNewPasswordFocused(true)}
+            onBlur={() => setIsNewPasswordFocused(false)}
           />
-          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowNewPassword(!showNewPassword)}> {/* Botón para mostrar/ocultar */}
-            <FontAwesome name={showNewPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" /> {/* Ícono de ojo */}
+          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowNewPassword(!showNewPassword)}>
+            <FontAwesome name={showNewPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" />
           </TouchableOpacity>
         </View>
 
-        {/* Muestra los requisitos de la contraseña solo si el campo está enfocado */}
+        {/* Requisitos de contraseña */}
         {isNewPasswordFocused && (
-          <View style={styles.passwordRequirements}> {/* Caja con fondo oscuro para requisitos */}
-            <Text style={styles.requirementTitle}>La contraseña debe contener:</Text> {/* Título de los requisitos */}
-            <PasswordRequirement isValid={isLengthValid}>8 carácteres como mínimo</PasswordRequirement> {/* Requisito de longitud */}
-            <PasswordRequirement isValid={hasUpperCase}>Una mayúscula</PasswordRequirement> {/* Requisito de mayúscula */}
-            <PasswordRequirement isValid={hasLowerCase}>Una minúscula</PasswordRequirement> {/* Requisito de minúscula */}
-            <PasswordRequirement isValid={hasNumber}>Un número</PasswordRequirement> {/* Requisito de número */}
+          <View style={styles.passwordRequirements}>
+            <Text style={styles.requirementTitle}>La contraseña debe contener:</Text>
+            <PasswordRequirement isValid={isLengthValid}>8 caracteres como mínimo</PasswordRequirement>
+            <PasswordRequirement isValid={hasUpperCase}>Una mayúscula</PasswordRequirement>
+            <PasswordRequirement isValid={hasLowerCase}>Una minúscula</PasswordRequirement>
+            <PasswordRequirement isValid={hasNumber}>Un número</PasswordRequirement>
           </View>
         )}
         
-        {/* Campo para confirmar la nueva contraseña */}
-        <View style={styles.inputGroup}> {/* Grupo de input con ícono, campo y ojo */}
-          <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} /> {/* Ícono de candado */}
+        {/* Confirmar Nueva Contraseña */}
+        <View style={styles.inputGroup}>
+          <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            placeholder="Confirmar Nueva Contraseña" // Texto placeholder
-            placeholderTextColor="#CCCCCC" // Color del placeholder
-            secureTextEntry={!showConfirmPassword} // Oculta si no se muestra
-            value={passwords.confirmPassword} // Valor del estado
-            onChangeText={(text) => setPasswords({...passwords, confirmPassword: text})} // Actualiza el estado
-            onFocus={() => setIsConfirmPasswordFocused(true)} // Marca como enfocado para mostrar validación
-            onBlur={() => setIsConfirmPasswordFocused(false)} // Desmarca al salir
+            placeholder="Confirmar Nueva Contraseña"
+            placeholderTextColor="#CCCCCC"
+            secureTextEntry={!showConfirmPassword}
+            value={passwords.confirmPassword}
+            onChangeText={(text) => setPasswords({...passwords, confirmPassword: text})}
+            onFocus={() => setIsConfirmPasswordFocused(true)}
+            onBlur={() => setIsConfirmPasswordFocused(false)}
           />
-          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)}> {/* Botón para mostrar/ocultar */}
-            <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" /> {/* Ícono de ojo */}
+          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+            <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" />
           </TouchableOpacity>
         </View>
 
-        {/* Muestra la validación de coincidencia solo si el campo está enfocado y no coinciden */}
+        {/* Validación de coincidencia */}
         {isConfirmPasswordFocused && !passwordsMatch && (
-          <View style={styles.confirmPasswordRequirements}> {/* Caja con fondo oscuro para validación */}
-            <ConfirmRequirement isValid={passwordsMatch}> {/* Requisito de coincidencia */}
+          <View style={styles.confirmPasswordRequirements}>
+            <ConfirmRequirement isValid={passwordsMatch}>
               Las contraseñas no coinciden
             </ConfirmRequirement>
           </View>
         )}
         
         {/* Botón para cambiar la contraseña */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}> {/* Botón que ejecuta la función */}
-          <Text style={styles.saveButtonText}>Cambiar Contraseña</Text> {/* Texto del botón */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
+          <Text style={styles.saveButtonText}>Cambiar Contraseña</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -163,85 +183,94 @@ const ChangePassword = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { // Estilo del contenedor principal
+  container: {
     flex: 1,
-    backgroundColor: '#000000', // Fondo 
+    backgroundColor: '#000000',
   },
-  section: { // Estilo de la sección principal
-    padding: 20, // Padding interno
+  section: {
+    padding: 20,
   },
-  sectionTitle: { // Estilo del título - CORREGIDO
+  sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20, // Espacio abajo
-    color: '#FFFFFF', // Color blanco para el texto
+    marginBottom: 20,
+    color: '#FFFFFF',
   },
-  inputGroup: { // Estilo del grupo de input (ícono + campo + ojo)
-    flexDirection: 'row', // Horizontal
-    alignItems: 'center', // Centrado vertical
-    backgroundColor: '#333333', // Fondo oscuro
-    borderRadius: 8, // Bordes redondeados
-    paddingHorizontal: 15, // Padding horizontal
-    marginBottom: 20, // Espacio abajo
-    width: '100%', // Ancho completo
-    height: 50, // Altura fija
+  inputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333333',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    width: '100%',
+    height: 50,
   },
-  icon: { // Estilo del ícono (candado)
-    marginRight: 15, // Espacio a la derecha
+  icon: {
+    marginRight: 15,
   },
-  input: { // Estilo del campo de texto
-    flex: 1, // Ocupa el espacio restante
-    color: '#FFFFFF', // Texto blanco
-    fontSize: 16, // Tamaño de fuente
+  input: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
   },
-  eyeIcon: { // Estilo del botón de ojo
-    padding: 5, // Padding interno
+  eyeIcon: {
+    padding: 5,
   },
-  passwordRequirements: { // Estilo de la caja de requisitos de contraseña
-    alignSelf: 'flex-start', // Alineado a la izquierda
-    width: '100%', // Ancho completo
-    marginBottom: 20, // Espacio abajo
-    backgroundColor: '#2b2b2b', // Fondo oscuro
-    padding: 10, // Padding interno
-    borderRadius: 5, // Bordes redondeados
+  passwordRequirements: {
+    alignSelf: 'flex-start',
+    width: '100%',
+    marginBottom: 20,
+    backgroundColor: '#2b2b2b',
+    padding: 10,
+    borderRadius: 5,
   },
-  confirmPasswordRequirements: { // Estilo de la caja de validación de confirmación
-    alignSelf: 'flex-start', // Alineado a la izquierda
-    width: '100%', // Ancho completo
-    marginBottom: 20, // Espacio abajo
-    backgroundColor: '#2b2b2b', // Fondo oscuro
-    padding: 10, // Padding interno
-    borderRadius: 5, // Bordes redondeados
+  confirmPasswordRequirements: {
+    alignSelf: 'flex-start',
+    width: '100%',
+    marginBottom: 20,
+    backgroundColor: '#2b2b2b',
+    padding: 10,
+    borderRadius: 5,
   },
-  requirementTitle: { // Estilo del título de los requisitos
-    color: '#CCCCCC', // Texto gris claro
-    fontWeight: 'bold', // Negrita
-    marginBottom: 5, // Espacio abajo
+  requirementTitle: {
+    color: '#CCCCCC',
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
-  requirementText: { // Estilo del texto de cada requisito
-    color: '#CCCCCC', // Texto gris claro
-    fontSize: 14, // Tamaño pequeño
-    marginBottom: 3, // Espacio abajo
+  // ESTILOS CORREGIDOS: Agregado requirementRow
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
   },
-  validRequirement: { // Estilo cuando el requisito es válido
-    color: '#2ecc71', // Verde
-    fontWeight: 'bold', // Negrita
+  requirementIcon: {
+    marginRight: 8,
   },
-  invalidRequirement: { // Estilo cuando el requisito no es válido
-    color: '#bebebeff', // Gris
+  requirementText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    flex: 1,
   },
-  saveButton: { // Estilo del botón de guardar
-    backgroundColor: '#b9770e', // Fondo dorado
-    padding: 15, // Padding interno
-    borderRadius: 8, // Bordes redondeados
-    alignItems: 'center', // Centrado horizontal
-    marginTop: 20, // Espacio arriba
+  validRequirement: {
+    color: '#2ecc71',
+    fontWeight: 'bold',
   },
-  saveButtonText: { // Estilo del texto del botón
-    color: '#fff', // Blanco
-    fontSize: 16, // Tamaño de fuente
-    fontWeight: 'bold', // Negrita
+  invalidRequirement: {
+    color: '#bebebeff',
+  },
+  saveButton: {
+    backgroundColor: '#b9770e',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
-export default ChangePassword; // Exporta el componente para usarlo en otras partes de la app
+export default ChangePassword;

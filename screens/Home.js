@@ -1,66 +1,93 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Image, 
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
   ScrollView,
   Modal,
   StatusBar,
-  ImageBackground
+  ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
-import { auth } from '../src/config/firebaseConfig';
+import { auth, db } from '../src/config/firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import CustomAlert from '../src/components/CustomAlert';
 
 const GTH_LOGO = require('../assets/logo.png');
 const BACKGROUND_IMAGE = require('../assets/home.jpg');
 
 export default function Home({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
-<<<<<<< HEAD
-
-  const handleLogOut = async () => {
-=======
   const [logoutAlertVisible, setLogoutAlertVisible] = useState(false);
-  const [successAlertVisible, setSuccessAlertVisible] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
+
+  useEffect(() => {
+    loadProfileImage();
+    
+    // Actualizar la imagen cuando el usuario regrese a esta pantalla
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadProfileImage();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadProfileImage = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists() && userDoc.data().profileImage) {
+          setProfileImage(userDoc.data().profileImage);
+        }
+      } catch (error) {
+        console.log('Error cargando imagen:', error);
+      }
+    }
+    setLoading(false);
+  };
+
+  const showAlert = (title, message) => {
+    setAlertConfig({ title, message });
+    setAlertVisible(true);
+  };
 
   const handleLogOutConfirm = async () => {
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
     try {
       await signOut(auth);
       setLogoutAlertVisible(false);
-      setSuccessAlertVisible(true);
-      
+      showAlert('Éxito', 'Sesión cerrada correctamente');
+
       setTimeout(() => {
-        setSuccessAlertVisible(false);
+        setAlertVisible(false);
         navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-      }, 2000);
+      }, 1500);
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     }
   };
 
-<<<<<<< HEAD
-  const ModuleCard = ({ icon, title, description, onPress, color }) => (
-    <TouchableOpacity style={styles.moduleCard} onPress={onPress}>
-      <View style={[styles.iconContainer, { backgroundColor: color }]}>
-        <FontAwesome name={icon} size={40} color="#FFFFFF" />
-      </View>
-      <View style={styles.moduleInfo}>
-        <Text style={styles.moduleTitle}>{title}</Text>
-        <Text style={styles.moduleDescription}>{description}</Text>
-      </View>
-      <FontAwesome name="chevron-right" size={20} color="#b9770e" />
-=======
   const handleLogOutRequest = () => {
     setMenuVisible(false);
     setLogoutAlertVisible(true);
   };
 
+  const getInitials = () => {
+    const user = auth.currentUser;
+    if (!user?.displayName) return 'US';
+    const names = user.displayName.split(' ');
+    return names[0][0].toUpperCase();
+  };
+
   const DashboardCard = ({ icon, title, color, onPress }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.dashboardCard, { borderColor: color }]}
       onPress={onPress}
     >
@@ -69,7 +96,6 @@ export default function Home({ navigation }) {
       </View>
       <Text style={styles.cardTitle}>{title}</Text>
       <FontAwesome name="chevron-right" size={24} color={color} />
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
     </TouchableOpacity>
   );
 
@@ -77,13 +103,13 @@ export default function Home({ navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
 
-      <ImageBackground 
-        source={BACKGROUND_IMAGE} 
+      <ImageBackground
+        source={BACKGROUND_IMAGE}
         style={styles.backgroundImage}
         imageStyle={{ opacity: 0.3 }}
       >
         <View style={styles.navbar}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuButton}
             onPress={() => setMenuVisible(true)}
           >
@@ -92,53 +118,20 @@ export default function Home({ navigation }) {
 
           <Text style={styles.navTitle}>GTH App</Text>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileButton}
             onPress={() => navigation.navigate('Profile')}
           >
-            <Image source={GTH_LOGO} style={styles.profileImage} />
+            {profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            ) : (
+              <View style={styles.profilePlaceholder}>
+                <Text style={styles.profileInitials}>{getInitials()}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
-<<<<<<< HEAD
-        <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>Bienvenido</Text>
-            <Text style={styles.welcomeSubtext}>¿Qué deseas gestionar hoy?</Text>
-          </View>
-
-          <View style={styles.modulesContainer}>
-            <ModuleCard
-              icon="tasks"
-              title="Tareas"
-              description="Gestiona y crea nuevas tareas"
-              color="#3498db"
-              onPress={() => navigation.navigate('CreateTask')}
-            />
-
-            <ModuleCard
-              icon="users"
-              title="Empleados"
-              description="Administra tu equipo de trabajo"
-              color="#2ecc71"
-              onPress={() => {}}
-            />
-
-            <ModuleCard
-              icon="building"
-              title="Propiedades"
-              description="Gestiona tus propiedades"
-              color="#e67e22"
-              onPress={() => {}}
-            />
-
-            <ModuleCard
-              icon="line-chart"
-              title="Seguimientos"
-              description="Realiza seguimiento de actividades"
-              color="#9b59b6"
-              onPress={() => {}}
-=======
         <ScrollView style={styles.mainContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.welcomeSection}>
             <Text style={styles.welcomeText}>Bienvenido</Text>
@@ -151,7 +144,6 @@ export default function Home({ navigation }) {
               title="Empleados"
               color="#3498db"
               onPress={() => {
-                // Navegar a empleados cuando esté implementado
                 console.log('Navegar a Empleados');
               }}
             />
@@ -161,7 +153,6 @@ export default function Home({ navigation }) {
               title="Tareas"
               color="#b9770e"
               onPress={() => navigation.navigate('CreateTask')}
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
             />
           </View>
         </ScrollView>
@@ -174,23 +165,25 @@ export default function Home({ navigation }) {
         animationType="slide"
         onRequestClose={() => setMenuVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
           <View style={styles.sideMenu}>
             <View style={styles.menuHeader}>
-              <Image source={GTH_LOGO} style={styles.menuLogo} />
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.menuLogo} />
+              ) : (
+                <Image source={GTH_LOGO} style={styles.menuLogo} />
+              )}
               <Text style={styles.menuTitle}>GTH Negocios</Text>
               <Text style={styles.menuSubtitle}>Inmobiliarios</Text>
               <Text style={styles.userEmail}>{auth.currentUser?.email}</Text>
             </View>
 
             <View style={styles.menuItems}>
-<<<<<<< HEAD
-=======
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => setMenuVisible(false)}
               >
@@ -198,66 +191,18 @@ export default function Home({ navigation }) {
                 <Text style={styles.menuItemText}>Inicio</Text>
               </TouchableOpacity>
 
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
                   setMenuVisible(false);
-<<<<<<< HEAD
-                }}
-              >
-                <FontAwesome name="user-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Mi Perfil</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                }}
-              >
-                <FontAwesome name="bell" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Notificaciones</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                }}
-              >
-                <FontAwesome name="cog" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Configuración</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                }}
-              >
-                <FontAwesome name="question-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Ayuda</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => {
-                  setMenuVisible(false);
-                }}
-              >
-                <FontAwesome name="info-circle" size={20} color="#b9770e" />
-                <Text style={styles.menuItemText}>Acerca de</Text>
-=======
                   navigation.navigate('Profile');
                 }}
               >
                 <FontAwesome name="user-circle" size={20} color="#b9770e" />
                 <Text style={styles.menuItemText}>Perfil</Text>
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => setMenuVisible(false)}
               >
@@ -265,7 +210,7 @@ export default function Home({ navigation }) {
                 <Text style={styles.menuItemText}>Ayuda</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => setMenuVisible(false)}
               >
@@ -273,9 +218,7 @@ export default function Home({ navigation }) {
                 <Text style={styles.menuItemText}>Acerca de</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-<<<<<<< HEAD
-=======
+              <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => setMenuVisible(false)}
               >
@@ -285,8 +228,7 @@ export default function Home({ navigation }) {
 
               <View style={styles.menuDivider} />
 
-              <TouchableOpacity 
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
+              <TouchableOpacity
                 style={[styles.menuItem, styles.logoutItem]}
                 onPress={handleLogOutRequest}
               >
@@ -310,16 +252,16 @@ export default function Home({ navigation }) {
             <FontAwesome name="exclamation-circle" size={50} color="#f39c12" style={styles.alertIcon} />
             <Text style={styles.alertTitle}>Cerrar sesión</Text>
             <Text style={styles.alertMessage}>¿Está seguro que desea cerrar sesión?</Text>
-            
+
             <View style={styles.alertButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.alertButton, styles.cancelButton]}
                 onPress={() => setLogoutAlertVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.alertButton, styles.confirmButton]}
                 onPress={handleLogOutConfirm}
               >
@@ -330,21 +272,12 @@ export default function Home({ navigation }) {
         </View>
       </Modal>
 
-      {/* Alerta de éxito al cerrar sesión */}
-      <Modal
-        visible={successAlertVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSuccessAlertVisible(false)}
-      >
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertBox}>
-            <FontAwesome name="check-circle" size={50} color="#2ecc71" style={styles.alertIcon} />
-            <Text style={styles.alertTitle}>Sesión cerrada</Text>
-            <Text style={styles.alertMessage}>Se ha cerrado sesión correctamente</Text>
-          </View>
-        </View>
-      </Modal>
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => setAlertVisible(false)}
+      />
     </View>
   );
 }
@@ -390,71 +323,47 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#b9770e',
   },
-<<<<<<< HEAD
-  contentContainer: {
-=======
+  profilePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#b9770e',
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileInitials: {
+    color: '#b9770e',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   mainContainer: {
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
     flex: 1,
     paddingHorizontal: 15,
   },
   welcomeSection: {
-<<<<<<< HEAD
-    paddingVertical: 30,
-=======
     marginTop: 30,
     marginBottom: 30,
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
     alignItems: 'center',
   },
   welcomeText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
-<<<<<<< HEAD
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 3,
-    marginBottom: 10,
-=======
     textShadowColor: 'rgba(0, 0, 0, 0.9)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
   },
   welcomeSubtext: {
     fontSize: 16,
     color: '#CCCCCC',
-<<<<<<< HEAD
-=======
     marginTop: 8,
     textAlign: 'center',
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-<<<<<<< HEAD
-  modulesContainer: {
-    paddingBottom: 20,
-  },
-  moduleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.75)',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(185, 119, 14, 0.3)',
-  },
-  iconContainer: {
-=======
   cardsContainer: {
     paddingBottom: 30,
   },
@@ -474,28 +383,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   cardIconContainer: {
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
     width: 70,
     height: 70,
     borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
-<<<<<<< HEAD
-    marginRight: 15,
-  },
-  moduleInfo: {
-    flex: 1,
-  },
-  moduleTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 5,
-  },
-  moduleDescription: {
-    fontSize: 14,
-    color: '#CCCCCC',
-=======
   },
   cardTitle: {
     flex: 1,
@@ -506,7 +398,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
->>>>>>> 1c1f8ec7cf18ef8b06f851be619914416e7f7c00
   },
   modalOverlay: {
     flex: 1,
@@ -583,7 +474,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   alertBox: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#000000',
     borderRadius: 15,
     padding: 25,
     width: '85%',
