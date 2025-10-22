@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
+import CustomAlert from '../src/components/CustomAlert';
 
 const ChangePassword = () => {
   const [passwords, setPasswords] = useState({
@@ -11,10 +12,13 @@ const ChangePassword = () => {
     confirmPassword: ''
   });
   
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isNewPasswordFocused, setIsNewPasswordFocused] = useState(false);
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
 
   // Validaciones
   const isLengthValid = passwords.newPassword.length >= 8;
@@ -24,23 +28,28 @@ const ChangePassword = () => {
   const allRequirementsMet = isLengthValid && hasUpperCase && hasLowerCase && hasNumber;
   const passwordsMatch = passwords.newPassword === passwords.confirmPassword && passwords.confirmPassword.length > 0;
 
+  const showAlert = (title, message) => {
+    setAlertConfig({ title, message });
+    setAlertVisible(true);
+  };
+
   const handleChangePassword = async () => {
     if (!passwords.currentPassword || !passwords.newPassword || !passwords.confirmPassword) {
-      Alert.alert('Error', 'Todos los campos son obligatorios.');
+      showAlert('Error', 'Todos los campos son obligatorios.');
       return;
     }
     if (!allRequirementsMet) {
-      Alert.alert('Error', 'La nueva contraseña debe cumplir con todos los requisitos de seguridad.');
+      showAlert('Error', 'La nueva contraseña debe cumplir con todos los requisitos de seguridad.');
       return;
     }
     if (!passwordsMatch) {
-      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      showAlert('Error', 'Las contraseñas no coinciden.');
       return;
     }
 
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert('Error', 'No se ha encontrado un usuario.');
+      showAlert('Error', 'No se ha encontrado un usuario.');
       return;
     }
 
@@ -49,7 +58,7 @@ const ChangePassword = () => {
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, passwords.newPassword);
 
-      Alert.alert('Éxito', 'Contraseña cambiada correctamente');
+      showAlert('Éxito', 'Contraseña cambiada correctamente');
 
       setPasswords({
         currentPassword: '',
@@ -59,17 +68,16 @@ const ChangePassword = () => {
 
     } catch (error) {
       if (error.code === 'auth/wrong-password') {
-        Alert.alert('Error', 'La contraseña actual es incorrecta.');
+        showAlert('Error', 'La contraseña actual es incorrecta.');
       } else if (error.code === 'auth/invalid-credential') {
-        Alert.alert('Error', 'La contraseña actual es incorrecta.');
+        showAlert('Error', 'La contraseña actual es incorrecta.');
       } else {
-        Alert.alert('Error', 'Ocurrió un error al cambiar la contraseña. Inténtalo de nuevo.');
+        showAlert('Error', 'Ocurrió un error al cambiar la contraseña. Inténtalo de nuevo.');
       }
       console.log(error);
     }
   };
 
-  // COMPONENTE CORREGIDO: PasswordRequirement
   const PasswordRequirement = ({ isValid, children }) => (
     <View style={styles.requirementRow}>
       <FontAwesome 
@@ -84,7 +92,6 @@ const ChangePassword = () => {
     </View>
   );
 
-  // COMPONENTE CORREGIDO: ConfirmRequirement
   const ConfirmRequirement = ({ isValid, children }) => (
     <View style={styles.requirementRow}>
       <FontAwesome 
@@ -104,17 +111,20 @@ const ChangePassword = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cambiar Contraseña</Text>
         
-        {/* Contraseña Actual */}
+        {/* Contraseña Actual - CON BOTÓN DE OJO */}
         <View style={styles.inputGroup}>
           <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
             placeholder="Contraseña Actual"
             placeholderTextColor="#CCCCCC"
-            secureTextEntry
+            secureTextEntry={!showCurrentPassword}
             value={passwords.currentPassword}
             onChangeText={(text) => setPasswords({...passwords, currentPassword: text})}
           />
+          <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+            <FontAwesome name={showCurrentPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" />
+          </TouchableOpacity>
         </View>
         
         {/* Nueva Contraseña */}
@@ -178,6 +188,13 @@ const ChangePassword = () => {
           <Text style={styles.saveButtonText}>Cambiar Contraseña</Text>
         </TouchableOpacity>
       </View>
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => setAlertVisible(false)}
+      />
     </ScrollView>
   );
 };
@@ -199,12 +216,14 @@ const styles = StyleSheet.create({
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#333333',
-    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
     paddingHorizontal: 15,
     marginBottom: 20,
     width: '100%',
     height: 50,
+    borderWidth: 2,
+    borderColor: '#b9770e',
   },
   icon: {
     marginRight: 15,
@@ -221,31 +240,35 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     width: '100%',
     marginBottom: 20,
-    backgroundColor: '#2b2b2b',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#1a1a1a',
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
   },
   confirmPasswordRequirements: {
     alignSelf: 'flex-start',
     width: '100%',
     marginBottom: 20,
-    backgroundColor: '#2b2b2b',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#1a1a1a',
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
   },
   requirementTitle: {
     color: '#CCCCCC',
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 10,
+    fontSize: 14,
   },
-  // ESTILOS CORREGIDOS: Agregado requirementRow
   requirementRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: 8,
   },
   requirementIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   requirementText: {
     color: '#CCCCCC',
@@ -261,10 +284,12 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#b9770e',
-    padding: 15,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
+    borderWidth: 2,
+    borderColor: '#b9770e',
   },
   saveButtonText: {
     color: '#fff',

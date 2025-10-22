@@ -6,8 +6,6 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView, 
-  Modal,
-  TouchableWithoutFeedback,
   ActivityIndicator,
   Platform,
 } from 'react-native';
@@ -118,26 +116,21 @@ const EditInformation = ({ navigation }) => {
   const onDateChange = (event, date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
-      if (event.type === 'set' && date) {
-        setSelectedDate(date);
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
-      }
-    } else {
-      if (date) {
-        setSelectedDate(date);
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
-      }
     }
-  };
-
-  const handleDatePickerConfirm = () => {
-    setShowDatePicker(false);
+    
+    if (date && event.type !== 'dismissed') {
+      setSelectedDate(date);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
+      
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
+    } else if (event.type === 'dismissed') {
+      setShowDatePicker(false);
+    }
   };
 
   const handleSave = async () => {
@@ -261,7 +254,7 @@ const EditInformation = ({ navigation }) => {
         <Text style={styles.helperText}>Este campo no se puede modificar</Text>
       </View>
 
-      {/* Botón Guardar */}
+      {/* Botón Guardar - MÁS CERCA */}
       <TouchableOpacity 
         style={[styles.saveButton, loading && styles.disabledButton]} 
         onPress={handleSave}
@@ -272,40 +265,15 @@ const EditInformation = ({ navigation }) => {
         </Text>
       </TouchableOpacity>
 
-      {/* Date Picker Modal */}
+      {/* Date Picker - SIN MODAL, SOLO EL COMPONENTE NATIVO */}
       {showDatePicker && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showDatePicker}
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <TouchableWithoutFeedback onPress={() => Platform.OS === 'ios' && setShowDatePicker(false)}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback>
-                <View style={styles.datePickerContainer}>
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onDateChange}
-                    maximumDate={new Date()}
-                    locale="es-ES"
-                    textColor="#ffffff"
-                  />
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity 
-                      style={styles.datePickerButton}
-                      onPress={handleDatePickerConfirm}
-                    >
-                      <Text style={styles.datePickerButtonText}>Aceptar</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+          maximumDate={new Date()}
+        />
       )}
 
       <CustomAlert
@@ -336,6 +304,7 @@ const styles = StyleSheet.create({
   },
   formSection: {
     padding: 20,
+    paddingBottom: 10,
   },
   label: {
     fontSize: 14,
@@ -394,7 +363,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginHorizontal: 20,
-    marginVertical: 30,
+    marginTop: 15,
+    marginBottom: 30,
     borderWidth: 2,
     borderColor: '#b9770e',
   },
@@ -403,36 +373,6 @@ const styles = StyleSheet.create({
     borderColor: '#666666',
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'flex-end',
-  },
-  datePickerContainer: {
-    backgroundColor: '#1a1a1a',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderColor: '#b9770e',
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-  },
-  datePickerButton: {
-    backgroundColor: '#b9770e',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 15,
-    borderWidth: 2,
-    borderColor: '#b9770e',
-  },
-  datePickerButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',

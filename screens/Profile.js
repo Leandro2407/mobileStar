@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { auth, db } from '../src/config/firebaseConfig';
@@ -107,7 +108,14 @@ const Profile = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <ImageBackground 
+      source={require('../assets/fondo-perfil.jpg')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      {/* Overlay oscuro para mejorar legibilidad */}
+      <View style={styles.overlay} />
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {/* Header con foto de perfil */}
@@ -186,14 +194,17 @@ const Profile = ({ navigation }) => {
         message={alertConfig.message}
         onClose={() => setAlertVisible(false)}
       />
-    </View>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   loadingContainer: {
     flex: 1,
@@ -265,15 +276,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginBottom: 5,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   email: {
     fontSize: 14,
-    color: '#999999',
+    color: '#dddddd',
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   menuContainer: {
     marginHorizontal: 20,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'rgba(26, 26, 26, 0.95)',
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#b9770e',
