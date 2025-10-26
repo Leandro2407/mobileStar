@@ -18,6 +18,8 @@ import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
 import { updateProfile } from 'firebase/auth';
 import CustomAlert from '../src/components/CustomAlert';
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../src/config/firebaseConfig";
 
 const GTH_LOGO = require('../assets/logo.png'); 
 const SIGNUP_BACKGROUND_IMAGE = require('../assets/signup.jpg');

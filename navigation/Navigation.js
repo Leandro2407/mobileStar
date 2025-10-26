@@ -13,6 +13,8 @@ import Profile from '../screens/Profile';
 import EditProfile from '../screens/EditProfile';
 import EditInformation from '../screens/EditInformation';
 import ChangePassword from '../screens/ChangePassword';
+import EmpleadosScreen from '../screens/EmpleadosList';
+import EmpleadoProfile from '../screens/EmpleadoProfile';
 
 const Stack = createStackNavigator();
 
@@ -135,6 +137,38 @@ function Navigation() {
             headerTitleStyle: {
               fontWeight: 'bold',
               color: '#fff',
+            }
+          }}
+        />
+        <Stack.Screen
+          name="Empleados"
+          component={EmpleadosScreen}
+          options={{ 
+            title: 'Empleados',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#000000',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              color: '#fff'
+            }
+          }}
+        />
+        <Stack.Screen
+          name="EmpleadoProfile"
+          component={EmpleadoProfile}
+          options={{ 
+            title: 'Perfil del Empleado',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#000000',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              color: '#fff'
             }
           }}
         />

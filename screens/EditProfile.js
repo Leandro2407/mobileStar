@@ -122,12 +122,11 @@ const EditProfile = ({ navigation }) => {
           <View style={styles.sectionLine} />
         </View>
 
-        <InfoCard icon="user" label="Nombre Completo" value={displayName} />
-        <InfoCard icon="envelope" label="Correo Electrónico" value={email} />
-        <InfoCard icon="phone" label="Teléfono" value={telefono} />
-        <InfoCard icon="calendar" label="Fecha de Nacimiento" value={fechaNacimiento} />
-        <InfoCard icon="map-marker" label="Ciudad" value={ciudad} />
-
+        <InfoCard icon="user" label="Nombre" value={userData?.nombre || 'No registrado'} />
+        <InfoCard icon="user" label="Apellido" value={userData?.apellido || 'No registrado'} />
+        <InfoCard icon="envelope" label="Correo Electrónico" value={user?.email || 'No registrado'} />
+        <InfoCard icon="calendar" label="Fecha de Nacimiento" value={userData?.fechaNacimiento || 'No registrada'} />
+        <InfoCard icon="home" label="Domicilio" value={userData?.domicilio || 'No registrado'} />
         <View style={{ height: 30 }} />
       </View>
     </ScrollView>

@@ -143,9 +143,7 @@ export default function Home({ navigation }) {
               icon="users"
               title="Empleados"
               color="#3498db"
-              onPress={() => {
-                console.log('Navegar a Empleados');
-              }}
+              onPress={() => navigation.navigate('Empleados')}
             />
 
             <DashboardCard
