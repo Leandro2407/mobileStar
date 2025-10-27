@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
 import CustomAlert from '../src/components/CustomAlert';
 
-const ChangePassword = () => {
+const ChangePassword = ({ navigation }) => {
   const [passwords, setPasswords] = useState({
     currentPassword: '',
     newPassword: '',
@@ -19,6 +19,19 @@ const ChangePassword = () => {
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
+  const [confirmChangeVisible, setConfirmChangeVisible] = useState(false);
+  const [confirmBackVisible, setConfirmBackVisible] = useState(false);
+
+  useEffect(() => {
+    const backHandler = navigation.addListener('beforeRemove', (e) => {
+      e.preventDefault();
+      setConfirmBackVisible(true);
+    });
+
+    return () => {
+      backHandler();
+    };
+  }, [navigation]);
 
   // Validaciones
   const isLengthValid = passwords.newPassword.length >= 8;
@@ -33,7 +46,7 @@ const ChangePassword = () => {
     setAlertVisible(true);
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePasswordRequest = () => {
     if (!passwords.currentPassword || !passwords.newPassword || !passwords.confirmPassword) {
       showAlert('Error', 'Todos los campos son obligatorios.');
       return;
@@ -46,6 +59,12 @@ const ChangePassword = () => {
       showAlert('Error', 'Las contraseñas no coinciden.');
       return;
     }
+
+    setConfirmChangeVisible(true);
+  };
+
+  const handleChangePasswordConfirm = async () => {
+    setConfirmChangeVisible(false);
 
     const user = auth.currentUser;
     if (!user) {
@@ -76,6 +95,19 @@ const ChangePassword = () => {
       }
       console.log(error);
     }
+  };
+
+  const handleBackConfirm = () => {
+    setConfirmBackVisible(false);
+    // Permitir la navegación hacia atrás
+    navigation.dispatch(state => {
+      const routes = state.routes.slice(0, -1);
+      return {
+        ...state,
+        routes,
+        index: routes.length - 1,
+      };
+    });
   };
 
   const PasswordRequirement = ({ isValid, children }) => (
@@ -111,7 +143,7 @@ const ChangePassword = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cambiar Contraseña</Text>
         
-        {/* Contraseña Actual - CON BOTÓN DE OJO */}
+        {/* Contraseña Actual */}
         <View style={styles.inputGroup}>
           <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
@@ -184,10 +216,74 @@ const ChangePassword = () => {
         )}
         
         {/* Botón para cambiar la contraseña */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleChangePasswordRequest}>
           <Text style={styles.saveButtonText}>Cambiar Contraseña</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal de confirmación para cambiar contraseña */}
+      <Modal
+        visible={confirmChangeVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmChangeVisible(false)}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <FontAwesome name="question-circle" size={50} color="#b9770e" style={styles.alertIcon} />
+            <Text style={styles.alertTitle}>Confirmar cambio</Text>
+            <Text style={styles.alertMessage}>¿Estás seguro que deseas cambiar la contraseña?</Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.cancelButton]}
+                onPress={() => setConfirmChangeVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.confirmButton]}
+                onPress={handleChangePasswordConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Aceptar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación para volver */}
+      <Modal
+        visible={confirmBackVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmBackVisible(false)}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <FontAwesome name="exclamation-triangle" size={50} color="#b9770e" style={styles.alertIcon} />
+            <Text style={styles.alertTitle}>Advertencia</Text>
+            <Text style={styles.alertMessage}>¿Estás seguro que deseas salir sin guardar cambios?</Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.cancelButton]}
+                onPress={() => setConfirmBackVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.confirmButton]}
+                onPress={handleBackConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Aceptar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <CustomAlert
         visible={alertVisible}
@@ -293,6 +389,65 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertBox: {
+    backgroundColor: '#000000',
+    borderRadius: 15,
+    padding: 25,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#b9770e',
+  },
+  alertIcon: {
+    marginBottom: 15,
+  },
+  alertTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  alertButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#333',
+  },
+  confirmButton: {
+    backgroundColor: '#b9770e',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },

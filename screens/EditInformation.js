@@ -1,288 +1,295 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../src/config/firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { FontAwesome } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { updateProfile } from 'firebase/auth';
 import CustomAlert from '../src/components/CustomAlert';
 
 const EditInformation = ({ navigation }) => {
   const user = auth.currentUser;
-  
-  const [formData, setFormData] = useState({
+  const [userData, setUserData] = useState({
     nombre: '',
     apellido: '',
     telefono: '',
     fechaNacimiento: '',
-    ciudad: '',
-    email: user?.email || '' 
+    barrio: '',
+    calle: '',
+    numero: '',
   });
-
-  const [loading, setLoading] = useState(true);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
+  const [confirmSaveVisible, setConfirmSaveVisible] = useState(false);
+  const [confirmBackVisible, setConfirmBackVisible] = useState(false);
 
   useEffect(() => {
     loadUserData();
-  }, []);
+    
+    const backHandler = navigation.addListener('beforeRemove', (e) => {
+      e.preventDefault();
+      setConfirmBackVisible(true);
+    });
+
+    return backHandler;
+  }, [navigation]);
+
+  const loadUserData = async () => {
+    try {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserData({
+            nombre: data.nombre || '',
+            apellido: data.apellido || '',
+            telefono: data.telefono || '',
+            fechaNacimiento: data.fechaNacimiento || '',
+            barrio: data.barrio || '',
+            calle: data.calle || '',
+            numero: data.numero || '',
+          });
+        }
+      }
+    } catch (error) {
+      console.log('Error cargando datos:', error);
+    }
+  };
 
   const showAlert = (title, message) => {
     setAlertConfig({ title, message });
     setAlertVisible(true);
   };
 
-  const loadUserData = async () => {
-    if (!user) {
-        setLoading(false);
-        return;
-    }
-    
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      const emailFromAuth = user.email || '';
-      let nombreInicial = '';
-      let apellidoInicial = '';
-
-      if (user.displayName) {
-          const names = user.displayName.split(' ');
-          nombreInicial = names[0] || '';
-          apellidoInicial = names.slice(1).join(' ') || '';
-      }
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        setFormData({
-          nombre: userData.nombre || nombreInicial,
-          apellido: userData.apellido || apellidoInicial,
-          telefono: userData.telefono || '',
-          fechaNacimiento: userData.fechaNacimiento || '',
-          ciudad: userData.ciudad || '',
-          email: emailFromAuth
-        });
-        
-        if (userData.fechaNacimiento) {
-          const [day, month, year] = userData.fechaNacimiento.split('/');
-          setSelectedDate(new Date(year, month - 1, day)); 
-        }
-      } else {
-        setFormData({
-          nombre: nombreInicial,
-          apellido: apellidoInicial,
-          telefono: '',
-          fechaNacimiento: '',
-          ciudad: '',
-          email: emailFromAuth
-        });
-      }
-    } catch (error) {
-      console.log('Error cargando datos:', error);
-      const emailFromAuth = user.email || '';
-      let nombreInicial = '';
-      let apellidoInicial = '';
-
-      if (user.displayName) {
-        const names = user.displayName.split(' ');
-        nombreInicial = names[0] || '';
-        apellidoInicial = names.slice(1).join(' ') || '';
-      }
-
-      setFormData({
-        nombre: nombreInicial,
-        apellido: apellidoInicial,
-        telefono: '',
-        fechaNacimiento: '',
-        ciudad: '',
-        email: emailFromAuth
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onDateChange = (event, date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    
-    if (date && event.type !== 'dismissed') {
-      setSelectedDate(date);
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear();
-      setFormData({...formData, fechaNacimiento: `${day}/${month}/${year}`});
-      
-      if (Platform.OS === 'ios') {
-        setShowDatePicker(false);
-      }
-    } else if (event.type === 'dismissed') {
-      setShowDatePicker(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!user) {
-      showAlert('', 'No hay usuario logueado');
+  const handleSaveRequest = () => {
+    if (!userData.nombre.trim() || !userData.apellido.trim()) {
+      showAlert('Error', 'El nombre y apellido son obligatorios.');
       return;
     }
 
-    if (!formData.nombre || !formData.apellido) {
-      showAlert('', 'Nombre y apellido son obligatorios');
+    if (userData.telefono && !/^\d+$/.test(userData.telefono)) {
+      showAlert('Error', 'El teléfono debe contener solo números.');
       return;
     }
 
-    setLoading(true);
+    setConfirmSaveVisible(true);
+  };
 
+  const handleSaveConfirm = async () => {
+    setConfirmSaveVisible(false);
+    
     try {
+      const fullName = `${userData.nombre} ${userData.apellido}`;
+      await updateProfile(user, { displayName: fullName });
+      
+      // Construir domicilio completo
+      let domicilio = '';
+      if (userData.barrio || userData.calle || userData.numero) {
+        const partes = [];
+        if (userData.calle) partes.push(userData.calle);
+        if (userData.numero) partes.push(userData.numero);
+        if (userData.barrio) partes.push(`Barrio ${userData.barrio}`);
+        domicilio = partes.join(', ');
+      }
+      
       await setDoc(doc(db, 'users', user.uid), {
-        nombre: formData.nombre,
-        apellido: formData.apellido,
-        telefono: formData.telefono,
-        fechaNacimiento: formData.fechaNacimiento,
-        ciudad: formData.ciudad,
-        email: user.email, 
+        nombre: userData.nombre,
+        apellido: userData.apellido,
+        telefono: userData.telefono,
+        fechaNacimiento: userData.fechaNacimiento,
+        barrio: userData.barrio,
+        calle: userData.calle,
+        numero: userData.numero,
+        domicilio: domicilio || 'No registrado',
         updatedAt: new Date(),
       }, { merge: true });
 
       showAlert('Éxito', 'Datos guardados correctamente');
-      setTimeout(() => navigation.goBack(), 1500);
-      
     } catch (error) {
-      showAlert('', 'No se pudieron guardar los datos');
-    } finally {
-      setLoading(false);
+      console.error('Error al guardar:', error);
+      showAlert('Error', 'No se pudieron guardar los cambios');
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#b9770e" />
-        <Text style={styles.loadingText}>Cargando información...</Text>
-      </View>
-    );
-  }
+  const handleBackConfirm = () => {
+    setConfirmBackVisible(false);
+    // Remover el listener antes de navegar
+    navigation.setOptions({
+      gestureEnabled: true
+    });
+    navigation.goBack();
+  };
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <ScrollView style={styles.section}>
+        <Text style={styles.sectionTitle}>Editar Información</Text>
 
-      <View style={styles.formSection}>
         {/* Nombre */}
-        <Text style={styles.label}>Nombre</Text>
-        <View style={styles.inputContainer}>
-          <FontAwesome name="user" size={18} color="#b9770e" style={styles.inputIcon} />
+        <View style={styles.inputGroup}>
+          <FontAwesome name="user" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            value={formData.nombre}
-            onChangeText={(text) => setFormData({...formData, nombre: text})}
-            placeholder="Tu nombre"
-            placeholderTextColor="#666666"
+            placeholder="Nombre"
+            placeholderTextColor="#666"
+            value={userData.nombre}
+            onChangeText={(text) => setUserData({...userData, nombre: text})}
           />
         </View>
 
         {/* Apellido */}
-        <Text style={styles.label}>Apellido</Text>
-        <View style={styles.inputContainer}>
-          <FontAwesome name="user" size={18} color="#b9770e" style={styles.inputIcon} />
+        <View style={styles.inputGroup}>
+          <FontAwesome name="user" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            value={formData.apellido}
-            onChangeText={(text) => setFormData({...formData, apellido: text})}
-            placeholder="Tu apellido"
-            placeholderTextColor="#666666"
+            placeholder="Apellido"
+            placeholderTextColor="#666"
+            value={userData.apellido}
+            onChangeText={(text) => setUserData({...userData, apellido: text})}
           />
         </View>
 
         {/* Teléfono */}
-        <Text style={styles.label}>Teléfono</Text>
-        <View style={styles.inputContainer}>
-          <FontAwesome name="phone" size={18} color="#b9770e" style={styles.inputIcon} />
+        <View style={styles.inputGroup}>
+          <FontAwesome name="phone" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            value={formData.telefono}
-            onChangeText={(text) => setFormData({...formData, telefono: text})}
-            placeholder="Número de teléfono"
-            placeholderTextColor="#666666"
+            placeholder="Teléfono"
+            placeholderTextColor="#666"
             keyboardType="phone-pad"
+            value={userData.telefono}
+            onChangeText={(text) => setUserData({...userData, telefono: text})}
           />
         </View>
 
         {/* Fecha de Nacimiento */}
-        <Text style={styles.label}>Fecha de Nacimiento</Text>
-        <TouchableOpacity 
-          style={styles.inputContainer}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <FontAwesome name="calendar" size={18} color="#b9770e" style={styles.inputIcon} />
-          <Text style={formData.fechaNacimiento ? styles.inputText : styles.placeholderText}>
-            {formData.fechaNacimiento || 'dd/mm/aaaa'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Ciudad */}
-        <Text style={styles.label}>Ciudad</Text>
-        <View style={styles.inputContainer}>
-          <FontAwesome name="map-marker" size={18} color="#b9770e" style={styles.inputIcon} />
+        <View style={styles.inputGroup}>
+          <FontAwesome name="calendar" size={20} color="#b9770e" style={styles.icon} />
           <TextInput
             style={styles.input}
-            value={formData.ciudad}
-            onChangeText={(text) => setFormData({...formData, ciudad: text})}
-            placeholder="Tu ciudad"
-            placeholderTextColor="#666666"
+            placeholder="Fecha de Nacimiento (DD/MM/AAAA)"
+            placeholderTextColor="#666"
+            value={userData.fechaNacimiento}
+            onChangeText={(text) => setUserData({...userData, fechaNacimiento: text})}
           />
         </View>
 
-        {/* Email - NO EDITABLE */}
-        <Text style={styles.label}>Email</Text>
-        <View style={[styles.inputContainer, styles.disabledInput]}>
-          <FontAwesome name="envelope" size={18} color="#666666" style={styles.inputIcon} />
-          <Text style={styles.disabledInputText}>{formData.email}</Text>
+        {/* Sección Domicilio */}
+        <Text style={styles.subsectionTitle}>Domicilio</Text>
+
+        {/* Barrio */}
+        <View style={styles.inputGroup}>
+          <FontAwesome name="map-marker" size={20} color="#b9770e" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Barrio"
+            placeholderTextColor="#666"
+            value={userData.barrio}
+            onChangeText={(text) => setUserData({...userData, barrio: text})}
+          />
         </View>
-        <Text style={styles.helperText}>Este campo no se puede modificar</Text>
-      </View>
 
-      {/* Botón Guardar - MÁS CERCA */}
-      <TouchableOpacity 
-        style={[styles.saveButton, loading && styles.disabledButton]} 
-        onPress={handleSave}
-        disabled={loading}
+        {/* Calle */}
+        <View style={styles.inputGroup}>
+          <FontAwesome name="road" size={20} color="#b9770e" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Calle"
+            placeholderTextColor="#666"
+            value={userData.calle}
+            onChangeText={(text) => setUserData({...userData, calle: text})}
+          />
+        </View>
+
+        {/* Número */}
+        <View style={styles.inputGroup}>
+          <FontAwesome name="home" size={20} color="#b9770e" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Número"
+            placeholderTextColor="#666"
+            keyboardType="numeric"
+            value={userData.numero}
+            onChangeText={(text) => setUserData({...userData, numero: text})}
+          />
+        </View>
+
+        {/* Botón Guardar */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveRequest}>
+          <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Modal de confirmación para guardar */}
+      <Modal
+        visible={confirmSaveVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmSaveVisible(false)}
       >
-        <Text style={styles.saveButtonText}>
-          {loading ? 'Guardando...' : 'Guardar Datos'}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <FontAwesome name="question-circle" size={50} color="#b9770e" style={styles.alertIcon} />
+            <Text style={styles.alertTitle}>Confirmar cambios</Text>
+            <Text style={styles.alertMessage}>¿Estás seguro que quieres guardar los cambios?</Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.cancelButton]}
+                onPress={() => setConfirmSaveVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.confirmButton]}
+                onPress={handleSaveConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Aceptar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-      {/* Date Picker - SIN MODAL, SOLO EL COMPONENTE NATIVO */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          maximumDate={new Date()}
-        />
-      )}
+      {/* Modal de confirmación para volver */}
+      <Modal
+        visible={confirmBackVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setConfirmBackVisible(false)}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <FontAwesome name="exclamation-triangle" size={50} color="#b9770e" style={styles.alertIcon} />
+            <Text style={styles.alertTitle}>Verificación</Text>
+            <Text style={styles.alertMessage}>Verifica que los datos ingresados sean los correctos</Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.cancelButton]}
+                onPress={() => setConfirmBackVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.alertButton, styles.confirmButton]}
+                onPress={handleBackConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Aceptar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-      <CustomAlert
+      <CustomAlert 
         visible={alertVisible}
         title={alertConfig.title}
         message={alertConfig.message}
         onClose={() => setAlertVisible(false)}
       />
-    </ScrollView>
+    </View>
   );
 };
 
@@ -291,89 +298,112 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  formSection: {
+  section: {
     padding: 20,
-    paddingBottom: 10,
   },
-  label: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
-    marginTop: 15,
+    marginBottom: 20,
+    color: '#FFFFFF',
   },
-  inputContainer: {
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 15,
+    color: '#b9770e',
+  },
+  inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
-    borderWidth: 2,
-    borderColor: '#b9770e',
     borderRadius: 10,
     paddingHorizontal: 15,
-    paddingVertical: 12,
-    minHeight: 50,
+    marginBottom: 20,
+    width: '100%',
+    height: 50,
+    borderWidth: 2,
+    borderColor: '#b9770e',
   },
-  inputIcon: {
-    marginRight: 12,
+  icon: {
+    marginRight: 15,
   },
   input: {
     flex: 1,
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
-  },
-  inputText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  placeholderText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#666666',
-  },
-  disabledInput: {
-    backgroundColor: '#1a1a1a',
-    borderColor: '#333333',
-  },
-  disabledInputText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#666666',
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#666666',
-    marginTop: 5,
-    marginLeft: 5,
   },
   saveButton: {
     backgroundColor: '#b9770e',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginTop: 15,
-    marginBottom: 30,
+    marginTop: 20,
     borderWidth: 2,
     borderColor: '#b9770e',
   },
-  disabledButton: {
-    backgroundColor: '#666666',
-    borderColor: '#666666',
-  },
   saveButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertBox: {
+    backgroundColor: '#000000',
+    borderRadius: 15,
+    padding: 25,
+    width: '85%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#b9770e',
+  },
+  alertIcon: {
+    marginBottom: 15,
+  },
+  alertTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  alertButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#333',
+  },
+  confirmButton: {
+    backgroundColor: '#b9770e',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },

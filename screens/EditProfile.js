@@ -74,7 +74,7 @@ const EditProfile = ({ navigation }) => {
   const email = user?.email || 'email@desconocido.com';
   const telefono = userData?.telefono || 'No especificado';
   const fechaNacimiento = userData?.fechaNacimiento || 'No especificada';
-  const ciudad = userData?.ciudad || 'No especificada';
+  const domicilio = userData?.domicilio || 'No registrado';
 
   if (loading) {
     return (
@@ -125,8 +125,9 @@ const EditProfile = ({ navigation }) => {
         <InfoCard icon="user" label="Nombre" value={userData?.nombre || 'No registrado'} />
         <InfoCard icon="user" label="Apellido" value={userData?.apellido || 'No registrado'} />
         <InfoCard icon="envelope" label="Correo Electrónico" value={user?.email || 'No registrado'} />
-        <InfoCard icon="calendar" label="Fecha de Nacimiento" value={userData?.fechaNacimiento || 'No registrada'} />
-        <InfoCard icon="home" label="Domicilio" value={userData?.domicilio || 'No registrado'} />
+        <InfoCard icon="phone" label="Teléfono" value={telefono} />
+        <InfoCard icon="calendar" label="Fecha de Nacimiento" value={fechaNacimiento} />
+        <InfoCard icon="home" label="Domicilio" value={domicilio} />
         <View style={{ height: 30 }} />
       </View>
     </ScrollView>
