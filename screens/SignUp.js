@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Image, 
-  KeyboardAvoidingView, 
-  Platform, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StatusBar,
   ImageBackground,
@@ -21,7 +21,7 @@ import CustomAlert from '../src/components/CustomAlert';
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../src/config/firebaseConfig";
 
-const GTH_LOGO = require('../assets/logo.png'); 
+const GTH_LOGO = require('../assets/logo.png');
 const SIGNUP_BACKGROUND_IMAGE = require('../assets/signup.jpg');
 
 export default function SignUp({ navigation }) {
@@ -37,24 +37,20 @@ export default function SignUp({ navigation }) {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
-  
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
-  
+
   const isLengthValid = password.length >= 8;
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasNumber = /\d/.test(password);
   const allRequirementsMet = isLengthValid && hasUpperCase && hasLowerCase && hasNumber;
-
   const isFirstNameValid = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(firstName) && firstName.length > 0;
   const isLastNameValid = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(lastName) && lastName.length > 0;
-
   const hasAtSymbol = email.includes('@');
   const hasDotCom = email.includes('.com');
   const isEmailValid = hasAtSymbol && hasDotCom;
-
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
   const showAlert = (title, message) => {
@@ -68,7 +64,6 @@ export default function SignUp({ navigation }) {
       BackHandler.exitApp();
       return true;
     });
-
     return () => backHandler.remove();
   }, []);
 
@@ -82,41 +77,66 @@ export default function SignUp({ navigation }) {
       showAlert("", "Todos los campos son obligatorios.");
       return;
     }
+
     if (!isFirstNameValid) {
       showAlert("", "El nombre solo puede contener letras y espacios.");
       return;
     }
+
     if (!isLastNameValid) {
       showAlert("", "El apellido solo puede contener letras y espacios.");
       return;
     }
+
     if (!isEmailValid) {
       showAlert("", "Ingrese un correo electrónico válido.");
       return;
     }
+
     if (password !== confirmPassword) {
       showAlert("", "Las contraseñas no coinciden.");
       return;
     }
+
     if (!allRequirementsMet) {
       showAlert("", "La contraseña debe cumplir con todos los requisitos de seguridad.");
       return;
     }
 
     try {
+      // Crear usuario en Authentication
       const response = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Actualizar el perfil con el nombre completo
       await updateProfile(response.user, {
         displayName: `${firstName} ${lastName}`
       });
 
+      // Guardar datos del empleado en Firestore
+      await setDoc(doc(db, "empleados", response.user.uid), {
+        nombre: firstName.trim(),
+        apellido: lastName.trim(),
+        email: email.trim(),
+        activo: true,
+        fechaIngreso: new Date().toISOString().split('T')[0],
+        telefono: "",
+        puesto: "",
+        fechaNacimiento: "",
+        ubicacion: "",
+        tareasCompletadas: 0,
+        tareasAsignadas: 0,
+        notas: "",
+        imagen: ""
+      });
+
       // Cerrar sesión inmediatamente después del registro
       await signOut(auth);
-
-      showAlert("Registro exitoso", "Tu cuenta ha sido creada. Por favor inicia sesión.");
       
+      showAlert("Registro exitoso", "Tu cuenta ha sido creada. Por favor inicia sesión.");
       setTimeout(() => {
         navigation.replace('Login');
       }, 2000);
+      
     } catch (error) {
       let errorMessage = "Hubo un problema al registrar el usuario.";
       switch (error.code) {
@@ -130,109 +150,82 @@ export default function SignUp({ navigation }) {
           errorMessage = "Problema de conexión. Revise su internet.";
           break;
       }
-      
       showAlert("Error", errorMessage);
     }
   };
 
   const PasswordRequirement = ({ isValid, children }) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-      <FontAwesome 
-        name={isValid ? "check-circle" : "times-circle"} 
-        size={14} 
-        color={isValid ? '#2ecc71' : '#bebebeff'} 
-        style={{ marginRight: 8 }} 
-      />
-      <Text style={[styles.requirementText, isValid && styles.validRequirement, !isValid && styles.invalidRequirement]}>
-        {children}
-      </Text>
-    </View>
+    <Text style={[styles.requirementText, isValid ? styles.validRequirement : styles.invalidRequirement]}>
+      {children}
+    </Text>
   );
 
   const InfoRequirement = ({ children }) => (
-    <View style={{ marginBottom: 3 }}>
-      <Text style={styles.infoText}>
-        {children}
-      </Text>
-    </View>
+    <Text style={styles.infoText}>
+      {children}
+    </Text>
   );
 
   const EmailRequirement = ({ isValid, children }) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-      <FontAwesome 
-        name={isValid ? "check-circle" : "times-circle"} 
-        size={14} 
-        color={isValid ? '#2ecc71' : '#bebebeff'} 
-        style={{ marginRight: 8 }} 
-      />
-      <Text style={[styles.requirementText, isValid && styles.validRequirement, !isValid && styles.invalidRequirement]}>
-        {children}
-      </Text>
-    </View>
+    <Text style={[styles.requirementText, isValid ? styles.validRequirement : styles.invalidRequirement]}>
+      {children}
+    </Text>
   );
 
   return (
-    <ImageBackground source={SIGNUP_BACKGROUND_IMAGE} style={styles.background} resizeMode="cover">
-      <StatusBar barStyle="light-content" />
+    <ImageBackground source={SIGNUP_BACKGROUND_IMAGE} style={styles.background}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.contentBox}>
             <Image source={GTH_LOGO} style={styles.logo} />
             <Text style={styles.title}>Crear Cuenta</Text>
 
             <View style={styles.inputGroup}>
-              <FontAwesome name="user" size={20} color="#b9770e" style={styles.icon} />
+              <FontAwesome name="user" size={20} color="#CCCCCC" style={styles.icon} />
               <TextInput
                 style={styles.input}
                 placeholder="Nombre"
-                placeholderTextColor="#CCCCCC"
-                autoCapitalize="words"
+                placeholderTextColor="#999999"
                 value={firstName}
                 onChangeText={(text) => handleNameInput(text, setFirstName)}
                 onFocus={() => setIsFirstNameFocused(true)}
                 onBlur={() => setIsFirstNameFocused(false)}
               />
             </View>
-
             {isFirstNameFocused && (
               <View style={styles.nameRequirements}>
-                <InfoRequirement>
-                  Se permite letras (A-Z, a-z), acentos y espacios
-                </InfoRequirement>
+                <InfoRequirement>Se permite letras (A-Z, a-z), acentos y espacios</InfoRequirement>
               </View>
             )}
 
             <View style={styles.inputGroup}>
-              <FontAwesome name="user" size={20} color="#b9770e" style={styles.icon} />
+              <FontAwesome name="user" size={20} color="#CCCCCC" style={styles.icon} />
               <TextInput
                 style={styles.input}
                 placeholder="Apellido"
-                placeholderTextColor="#CCCCCC"
-                autoCapitalize="words"
+                placeholderTextColor="#999999"
                 value={lastName}
                 onChangeText={(text) => handleNameInput(text, setLastName)}
                 onFocus={() => setIsLastNameFocused(true)}
                 onBlur={() => setIsLastNameFocused(false)}
               />
             </View>
-
             {isLastNameFocused && (
               <View style={styles.nameRequirements}>
-                <InfoRequirement>
-                  Se permite letras (A-Z, a-z), acentos y espacios
-                </InfoRequirement>
+                <InfoRequirement>Se permite letras (A-Z, a-z), acentos y espacios</InfoRequirement>
               </View>
             )}
 
             <View style={styles.inputGroup}>
-              <FontAwesome name="envelope-o" size={20} color="#b9770e" style={styles.icon} />
+              <FontAwesome name="envelope" size={20} color="#CCCCCC" style={styles.icon} />
               <TextInput
                 style={styles.input}
-                placeholder="Correo electrónico"
-                placeholderTextColor="#CCCCCC"
+                placeholder="Correo Electrónico"
+                placeholderTextColor="#999999"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
@@ -241,32 +234,28 @@ export default function SignUp({ navigation }) {
                 onBlur={() => setIsEmailFocused(false)}
               />
             </View>
-
             {isEmailFocused && !isEmailValid && (
               <View style={styles.emailRequirements}>
-                <EmailRequirement isValid={isEmailValid}>
-                  Ingrese un correo electrónico válido (ejemplo@gmail.com)
-                </EmailRequirement>
+                <InfoRequirement>Ingrese un correo electrónico válido (ejemplo@gmail.com)</InfoRequirement>
               </View>
             )}
 
             <View style={styles.inputGroup}>
-              <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
+              <FontAwesome name="lock" size={20} color="#CCCCCC" style={styles.icon} />
               <TextInput
                 style={styles.input}
                 placeholder="Contraseña"
-                placeholderTextColor="#CCCCCC"
+                placeholderTextColor="#999999"
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
                 onFocus={() => setIsPasswordFocused(true)}
                 onBlur={() => setIsPasswordFocused(false)}
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <FontAwesome name={showPassword ? "eye" : "eye-slash"} size={20} color="#CCCCCC" />
               </TouchableOpacity>
             </View>
-
             {isPasswordFocused && (
               <View style={styles.passwordRequirements}>
                 <Text style={styles.requirementTitle}>La contraseña debe contener:</Text>
@@ -278,27 +267,24 @@ export default function SignUp({ navigation }) {
             )}
 
             <View style={styles.inputGroup}>
-              <FontAwesome name="lock" size={20} color="#b9770e" style={styles.icon} />
+              <FontAwesome name="lock" size={20} color="#CCCCCC" style={styles.icon} />
               <TextInput
                 style={styles.input}
                 placeholder="Confirmar Contraseña"
-                placeholderTextColor="#CCCCCC"
+                placeholderTextColor="#999999"
                 secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 onFocus={() => setIsConfirmPasswordFocused(true)}
                 onBlur={() => setIsConfirmPasswordFocused(false)}
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#CCCCCC" />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                <FontAwesome name={showConfirmPassword ? "eye" : "eye-slash"} size={20} color="#CCCCCC" />
               </TouchableOpacity>
             </View>
-
             {isConfirmPasswordFocused && !passwordsMatch && (
               <View style={styles.confirmPasswordRequirements}>
-                <EmailRequirement isValid={passwordsMatch}>
-                  Las contraseñas no coinciden
-                </EmailRequirement>
+                <InfoRequirement>Las contraseñas no coinciden</InfoRequirement>
               </View>
             )}
 
@@ -307,9 +293,9 @@ export default function SignUp({ navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.signUpText}>
-                <Text style={styles.normalText}>¿Ya tenés cuenta? </Text>
-                <Text style={styles.boldText}>Inicia sesión</Text>
+              <Text style={styles.normalText}>
+                ¿Ya tenés cuenta?{' '}
+                <Text style={styles.signUpText}>Inicia sesión</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -459,6 +445,7 @@ const styles = StyleSheet.create({
   },
   normalText: {
     fontWeight: 'normal',
+    color: '#FFFFFF',
   },
   boldText: {
     fontWeight: 'bold',
