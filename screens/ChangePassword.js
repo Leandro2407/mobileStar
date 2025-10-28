@@ -86,9 +86,7 @@ const ChangePassword = ({ navigation }) => {
       });
 
     } catch (error) {
-      if (error.code === 'auth/wrong-password') {
-        showAlert('Error', 'La contraseña actual es incorrecta.');
-      } else if (error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         showAlert('Error', 'La contraseña actual es incorrecta.');
       } else {
         showAlert('Error', 'Ocurrió un error al cambiar la contraseña. Inténtalo de nuevo.');
@@ -99,15 +97,8 @@ const ChangePassword = ({ navigation }) => {
 
   const handleBackConfirm = () => {
     setConfirmBackVisible(false);
-    // Permitir la navegación hacia atrás
-    navigation.dispatch(state => {
-      const routes = state.routes.slice(0, -1);
-      return {
-        ...state,
-        routes,
-        index: routes.length - 1,
-      };
-    });
+    // FIX: Usar goBack() para volver a la pantalla anterior (Perfil)
+    navigation.goBack();
   };
 
   const PasswordRequirement = ({ isValid, children }) => (
@@ -253,7 +244,7 @@ const ChangePassword = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Modal de confirmación para volver */}
+      {/* Modal de confirmación para volver (Salir sin guardar) */}
       <Modal
         visible={confirmBackVisible}
         transparent={true}

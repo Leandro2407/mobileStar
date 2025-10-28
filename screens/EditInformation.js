@@ -116,6 +116,7 @@ const EditInformation = ({ navigation }) => {
     navigation.setOptions({
       gestureEnabled: true
     });
+    // La acción de volver funciona correctamente
     navigation.goBack();
   };
 
@@ -251,7 +252,7 @@ const EditInformation = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Modal de confirmación para volver */}
+      {/* Modal de confirmación para volver (Advertencia de cambios no guardados) */}
       <Modal
         visible={confirmBackVisible}
         transparent={true}
@@ -261,8 +262,8 @@ const EditInformation = ({ navigation }) => {
         <View style={styles.alertOverlay}>
           <View style={styles.alertBox}>
             <FontAwesome name="exclamation-triangle" size={50} color="#b9770e" style={styles.alertIcon} />
-            <Text style={styles.alertTitle}>Verificación</Text>
-            <Text style={styles.alertMessage}>Verifica que los datos ingresados sean los correctos</Text>
+            <Text style={styles.alertTitle}>Advertencia</Text>
+            <Text style={styles.alertMessage}>Tienes cambios sin guardar. ¿Estás seguro que deseas salir?</Text>
             
             <View style={styles.alertButtons}>
               <TouchableOpacity 
