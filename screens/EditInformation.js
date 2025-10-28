@@ -1,10 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, Platform, Dimensions } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../src/config/firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import CustomAlert from '../src/components/CustomAlert';
+
+// Requiere instalación: npx expo install @react-native-community/datetimepicker
+import DateTimePicker from '@react-native-community/datetimepicker'; 
+
+// Componente auxiliar para campos de entrada con etiqueta (Título)
+const InputField = ({ icon, label, value, onChangeText, placeholder, keyboardType = 'default', editable = true, onPress }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.inputLabel}>{label}</Text>
+    <TouchableOpacity 
+        style={styles.inputGroup} 
+        onPress={onPress} 
+        activeOpacity={onPress ? 0.7 : 1}
+        disabled={!onPress && editable} // Deshabilita el toque si es un campo de texto simple editable
+    >
+      <FontAwesome name={icon} size={20} color={editable ? "#b9770e" : "#555"} style={styles.icon} />
+      <TextInput
+        style={[styles.input, !editable && styles.uneditableInput]}
+        placeholder={placeholder}
+        placeholderTextColor="#666"
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        editable={editable && !onPress} // No editable si hay un onPress (para el picker)
+        onPressIn={onPress} // Permite que el DatePicker se abra al tocar
+      />
+    </TouchableOpacity>
+  </View>
+);
 
 const EditInformation = ({ navigation }) => {
   const user = auth.currentUser;
@@ -17,29 +45,43 @@ const EditInformation = ({ navigation }) => {
     calle: '',
     numero: '',
   });
+  
+  // Estados para el Date Picker
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [date, setDate] = useState(new Date());
+
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
   const [confirmSaveVisible, setConfirmSaveVisible] = useState(false);
   const [confirmBackVisible, setConfirmBackVisible] = useState(false);
 
+  // Estado para rastrear los datos originales y verificar cambios
+  const [originalData, setOriginalData] = useState({});
+
   useEffect(() => {
     loadUserData();
     
+    // Bloquear la navegación hacia atrás si hay cambios sin guardar
     const backHandler = navigation.addListener('beforeRemove', (e) => {
-      e.preventDefault();
-      setConfirmBackVisible(true);
+        // Simple chequeo de que algún campo no esté vacío para mostrar la modal
+        const hasChanges = Object.values(userData).some(val => val.trim() !== '');
+
+        if (hasChanges) {
+            e.preventDefault();
+            setConfirmBackVisible(true);
+        }
     });
 
     return backHandler;
-  }, [navigation]);
+  }, [navigation, userData]); // Dependencia agregada a userData para chequeo de cambios
 
   const loadUserData = async () => {
     try {
       if (user) {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserData({
+        const data = userDoc.exists() ? userDoc.data() : {};
+        
+        const initialData = {
             nombre: data.nombre || '',
             apellido: data.apellido || '',
             telefono: data.telefono || '',
@@ -47,7 +89,18 @@ const EditInformation = ({ navigation }) => {
             barrio: data.barrio || '',
             calle: data.calle || '',
             numero: data.numero || '',
-          });
+        };
+        
+        setUserData(initialData);
+        setOriginalData(initialData);
+        
+        // Inicializar el Date Picker con la fecha guardada, si existe
+        if (data.fechaNacimiento) {
+            const [day, month, year] = data.fechaNacimiento.split('/').map(Number);
+            if (year && month && day) {
+                // Meses en JS son 0-indexados (0=Ene)
+                setDate(new Date(year, month - 1, day));
+            }
         }
       }
     } catch (error) {
@@ -61,8 +114,8 @@ const EditInformation = ({ navigation }) => {
   };
 
   const handleSaveRequest = () => {
-    if (!userData.nombre.trim() || !userData.apellido.trim()) {
-      showAlert('Error', 'El nombre y apellido son obligatorios.');
+    if (!userData.nombre.trim() || !userData.apellido.trim() || !userData.telefono.trim() || !userData.fechaNacimiento.trim()) {
+      showAlert('Error', 'Nombre, Apellido, Teléfono y Fecha de Nacimiento son obligatorios.');
       return;
     }
 
@@ -81,7 +134,7 @@ const EditInformation = ({ navigation }) => {
       const fullName = `${userData.nombre} ${userData.apellido}`;
       await updateProfile(user, { displayName: fullName });
       
-      // Construir domicilio completo
+      // Construir domicilio
       let domicilio = '';
       if (userData.barrio || userData.calle || userData.numero) {
         const partes = [];
@@ -91,7 +144,7 @@ const EditInformation = ({ navigation }) => {
         domicilio = partes.join(', ');
       }
       
-      await setDoc(doc(db, 'users', user.uid), {
+      const dataToSave = {
         nombre: userData.nombre,
         apellido: userData.apellido,
         telefono: userData.telefono,
@@ -101,7 +154,12 @@ const EditInformation = ({ navigation }) => {
         numero: userData.numero,
         domicilio: domicilio || 'No registrado',
         updatedAt: new Date(),
-      }, { merge: true });
+      };
+      
+      await setDoc(doc(db, 'users', user.uid), dataToSave, { merge: true });
+
+      // Actualizar datos originales después de guardar
+      setOriginalData(dataToSave);
 
       showAlert('Éxito', 'Datos guardados correctamente');
     } catch (error) {
@@ -110,115 +168,156 @@ const EditInformation = ({ navigation }) => {
     }
   };
 
+  // FIX: Esta función ahora navega correctamente a la pantalla anterior
   const handleBackConfirm = () => {
     setConfirmBackVisible(false);
-    // Remover el listener antes de navegar
-    navigation.setOptions({
-      gestureEnabled: true
-    });
-    // La acción de volver funciona correctamente
-    navigation.goBack();
+    navigation.goBack(); // Vuelve a la pantalla de Perfil
+  };
+  
+  // Lógica del Date Picker
+  const onChangeDate = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    
+    if (Platform.OS === 'android') {
+        setShowDatePicker(false);
+    }
+    
+    setDate(currentDate);
+    // Formato DD/MM/YYYY
+    const formattedDate = `${String(currentDate.getDate()).padStart(2, '0')}/${String(currentDate.getMonth() + 1).padStart(2, '0')}/${currentDate.getFullYear()}`;
+    setUserData(prev => ({ ...prev, fechaNacimiento: formattedDate }));
   };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.section}>
-        <Text style={styles.sectionTitle}>Editar Información</Text>
+        <Text style={styles.sectionTitle}>Editar Información Personal</Text>
 
         {/* Nombre */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="user" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre"
-            placeholderTextColor="#666"
-            value={userData.nombre}
-            onChangeText={(text) => setUserData({...userData, nombre: text})}
-          />
-        </View>
+        <InputField
+          icon="user"
+          label="Nombre"
+          placeholder="Ingresa tu nombre"
+          value={userData.nombre}
+          onChangeText={(text) => setUserData({...userData, nombre: text})}
+        />
 
         {/* Apellido */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="user" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Apellido"
-            placeholderTextColor="#666"
-            value={userData.apellido}
-            onChangeText={(text) => setUserData({...userData, apellido: text})}
-          />
-        </View>
+        <InputField
+          icon="user"
+          label="Apellido"
+          placeholder="Ingresa tu apellido"
+          value={userData.apellido}
+          onChangeText={(text) => setUserData({...userData, apellido: text})}
+        />
+
+        {/* Correo Electrónico (No Editable) */}
+        <InputField
+          icon="envelope"
+          label="Correo Electrónico"
+          placeholder="Tu email de usuario"
+          value={user?.email || ''}
+          editable={false}
+        />
 
         {/* Teléfono */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="phone" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Teléfono"
-            placeholderTextColor="#666"
-            keyboardType="phone-pad"
-            value={userData.telefono}
-            onChangeText={(text) => setUserData({...userData, telefono: text})}
-          />
-        </View>
+        <InputField
+          icon="phone"
+          label="Número de Teléfono"
+          placeholder="Ingresa tu teléfono"
+          keyboardType="phone-pad"
+          value={userData.telefono}
+          onChangeText={(text) => setUserData({...userData, telefono: text})}
+        />
 
-        {/* Fecha de Nacimiento */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="calendar" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Fecha de Nacimiento (DD/MM/AAAA)"
-            placeholderTextColor="#666"
-            value={userData.fechaNacimiento}
-            onChangeText={(text) => setUserData({...userData, fechaNacimiento: text})}
-          />
-        </View>
-
+        {/* Fecha de Nacimiento con Calendario (Date Picker) */}
+        <InputField
+          icon="calendar"
+          label="Fecha de Nacimiento"
+          placeholder="DD/MM/AAAA"
+          value={userData.fechaNacimiento}
+          editable={false} // Se deshabilita la edición directa
+          onPress={() => setShowDatePicker(true)} // Se abre el calendario al tocar
+        />
+        
+        {/* DatePicker para Android */}
+        {showDatePicker && Platform.OS === 'android' && (
+            <DateTimePicker
+                testID="dateTimePicker"
+                value={date}
+                mode="date"
+                display="default"
+                onChange={onChangeDate}
+                maximumDate={new Date()}
+            />
+        )}
+        
         {/* Sección Domicilio */}
         <Text style={styles.subsectionTitle}>Domicilio</Text>
 
         {/* Barrio */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="map-marker" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Barrio"
-            placeholderTextColor="#666"
-            value={userData.barrio}
-            onChangeText={(text) => setUserData({...userData, barrio: text})}
-          />
-        </View>
+        <InputField
+          icon="map-marker"
+          label="Barrio"
+          placeholder="Ingresa tu barrio"
+          value={userData.barrio}
+          onChangeText={(text) => setUserData({...userData, barrio: text})}
+        />
 
         {/* Calle */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="road" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Calle"
-            placeholderTextColor="#666"
-            value={userData.calle}
-            onChangeText={(text) => setUserData({...userData, calle: text})}
-          />
-        </View>
+        <InputField
+          icon="road"
+          label="Calle"
+          placeholder="Ingresa la calle"
+          value={userData.calle}
+          onChangeText={(text) => setUserData({...userData, calle: text})}
+        />
 
         {/* Número */}
-        <View style={styles.inputGroup}>
-          <FontAwesome name="home" size={20} color="#b9770e" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Número"
-            placeholderTextColor="#666"
-            keyboardType="numeric"
-            value={userData.numero}
-            onChangeText={(text) => setUserData({...userData, numero: text})}
-          />
-        </View>
+        <InputField
+          icon="home"
+          label="Número de Domicilio"
+          placeholder="Número"
+          keyboardType="numeric"
+          value={userData.numero}
+          onChangeText={(text) => setUserData({...userData, numero: text})}
+        />
 
         {/* Botón Guardar */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveRequest}>
           <Text style={styles.saveButtonText}>Guardar Cambios</Text>
         </TouchableOpacity>
+        
+        <View style={{ height: 30 }} />
+
       </ScrollView>
+
+      {/* DatePicker para iOS (en Modal) */}
+      {showDatePicker && Platform.OS === 'ios' && (
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.datePickerOverlay}>
+            <View style={styles.datePickerContainer}>
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={date}
+                mode="date"
+                display="spinner"
+                onChange={onChangeDate}
+                textColor="#ffffff"
+                maximumDate={new Date()}
+              />
+              <TouchableOpacity style={styles.datePickerDoneButton} onPress={() => setShowDatePicker(false)}>
+                <Text style={styles.datePickerDoneText}>Confirmar Fecha</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Modal de confirmación para guardar */}
       <Modal
@@ -231,7 +330,7 @@ const EditInformation = ({ navigation }) => {
           <View style={styles.alertBox}>
             <FontAwesome name="question-circle" size={50} color="#b9770e" style={styles.alertIcon} />
             <Text style={styles.alertTitle}>Confirmar cambios</Text>
-            <Text style={styles.alertMessage}>¿Estás seguro que quieres guardar los cambios?</Text>
+            <Text style={styles.alertMessage}>Verifica si los datos ingresados son los correctos.</Text>
             
             <View style={styles.alertButtons}>
               <TouchableOpacity 
@@ -252,7 +351,7 @@ const EditInformation = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Modal de confirmación para volver (Advertencia de cambios no guardados) */}
+      {/* Modal de confirmación para volver (Advertencia de cambios no guardados) - SOLUCIÓN A LA NAVEGACIÓN */}
       <Modal
         visible={confirmBackVisible}
         transparent={true}
@@ -275,7 +374,7 @@ const EditInformation = ({ navigation }) => {
               
               <TouchableOpacity 
                 style={[styles.alertButton, styles.confirmButton]}
-                onPress={handleBackConfirm}
+                onPress={handleBackConfirm} // <-- CORRECCIÓN APLICADA
               >
                 <Text style={styles.confirmButtonText}>Aceptar</Text>
               </TouchableOpacity>
@@ -315,17 +414,27 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: '#b9770e',
   },
+  
+  // Estilos para InputField con etiqueta
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    fontWeight: '600',
+    marginBottom: 5,
+  },
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
     borderRadius: 10,
     paddingHorizontal: 15,
-    marginBottom: 20,
     width: '100%',
     height: 50,
-    borderWidth: 2,
-    borderColor: '#b9770e',
+    borderWidth: 1, 
+    borderColor: '#2a2a2a',
   },
   icon: {
     marginRight: 15,
@@ -334,7 +443,13 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#FFFFFF',
     fontSize: 16,
+    height: '100%',
+    paddingVertical: 0,
   },
+  uneditableInput: {
+    color: '#999999',
+  },
+  
   saveButton: {
     backgroundColor: '#b9770e',
     padding: 16,
@@ -349,6 +464,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  // Estilos de Modales (Alertas)
   alertOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.85)',
@@ -359,7 +475,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     borderRadius: 15,
     padding: 25,
-    width: '85%',
+    width: Dimensions.get('window').width * 0.85,
     maxWidth: 400,
     alignItems: 'center',
     borderWidth: 2,
@@ -405,6 +521,31 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Estilos para el DatePicker Modal (solo iOS)
+  datePickerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  datePickerContainer: {
+    backgroundColor: '#1a1a1a',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  datePickerDoneButton: {
+    width: '100%',
+    padding: 15,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: '#333333',
+  },
+  datePickerDoneText: {
+    color: '#b9770e',
     fontSize: 16,
     fontWeight: 'bold',
   },

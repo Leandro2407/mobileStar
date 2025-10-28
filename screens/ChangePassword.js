@@ -24,14 +24,17 @@ const ChangePassword = ({ navigation }) => {
 
   useEffect(() => {
     const backHandler = navigation.addListener('beforeRemove', (e) => {
-      e.preventDefault();
-      setConfirmBackVisible(true);
+      // Bloquea la navegación si hay algún campo lleno
+      if (passwords.currentPassword || passwords.newPassword || passwords.confirmPassword) {
+        e.preventDefault();
+        setConfirmBackVisible(true);
+      }
     });
 
     return () => {
       backHandler();
     };
-  }, [navigation]);
+  }, [navigation, passwords]);
 
   // Validaciones
   const isLengthValid = passwords.newPassword.length >= 8;
@@ -95,10 +98,10 @@ const ChangePassword = ({ navigation }) => {
     }
   };
 
+  // FIX: Esta función ahora navega correctamente a la pantalla anterior
   const handleBackConfirm = () => {
     setConfirmBackVisible(false);
-    // FIX: Usar goBack() para volver a la pantalla anterior (Perfil)
-    navigation.goBack();
+    navigation.goBack(); // Vuelve a la pantalla de Perfil
   };
 
   const PasswordRequirement = ({ isValid, children }) => (
@@ -244,7 +247,7 @@ const ChangePassword = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Modal de confirmación para volver (Salir sin guardar) */}
+      {/* Modal de confirmación para volver (Salir sin guardar) - SOLUCIÓN A LA NAVEGACIÓN */}
       <Modal
         visible={confirmBackVisible}
         transparent={true}
@@ -267,7 +270,7 @@ const ChangePassword = ({ navigation }) => {
               
               <TouchableOpacity 
                 style={[styles.alertButton, styles.confirmButton]}
-                onPress={handleBackConfirm}
+                onPress={handleBackConfirm} // <-- CORRECCIÓN APLICADA
               >
                 <Text style={styles.confirmButtonText}>Aceptar</Text>
               </TouchableOpacity>
