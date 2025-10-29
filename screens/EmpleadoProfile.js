@@ -12,6 +12,15 @@ export default function EmpleadoProfile({ route }) {
       return (firstName + lastName).toUpperCase();
     };
 
+    // Construir domicilio completo para mostrar
+    const getDomicilioCompleto = () => {
+      const partes = [];
+      if (empleado.calle) partes.push(empleado.calle);
+      if (empleado.numeroDomicilio) partes.push(empleado.numeroDomicilio);
+      if (empleado.barrio) partes.push(`Barrio ${empleado.barrio}`);
+      return partes.length > 0 ? partes.join(', ') : 'No registrado';
+    };
+
     return (
       <ImageBackground 
         source={require('../assets/fondo-perfil.jpg')}
@@ -56,6 +65,18 @@ export default function EmpleadoProfile({ route }) {
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <View style={styles.infoLeft}>
+                  <FontAwesome name="id-card" size={20} color="#b9770e" />
+                  <Text style={styles.infoLabel}>DNI</Text>
+                </View>
+                <Text style={styles.infoValue}>
+                  {empleado.dni || 'No registrado'}
+                </Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoLeft}>
                   <FontAwesome name="envelope" size={20} color="#b9770e" />
                   <Text style={styles.infoLabel}>Email</Text>
                 </View>
@@ -95,25 +116,47 @@ export default function EmpleadoProfile({ route }) {
                   {empleado.fechaIngreso || 'No registrada'}
                 </Text>
               </View>
+            </View>
 
-              <View style={styles.divider} />
-
+            {/* Sección de Domicilio */}
+            <Text style={styles.sectionTitle}>Domicilio</Text>
+            <View style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <View style={styles.infoLeft}>
-                  <FontAwesome name="calendar" size={20} color="#b9770e" />
-                  <Text style={styles.infoLabel}>Fecha de Nacimiento</Text>
+                  <FontAwesome name="map-marker" size={20} color="#b9770e" />
+                  <Text style={styles.infoLabel}>Barrio</Text>
                 </View>
-                <Text style={styles.infoValue}>{empleado.fechaNacimiento || 'No registrada'}</Text>
+                <Text style={styles.infoValue}>{empleado.barrio || 'No registrado'}</Text>
               </View>
 
               <View style={styles.divider} />
 
               <View style={styles.infoRow}>
                 <View style={styles.infoLeft}>
-                  <FontAwesome name="map-marker" size={20} color="#b9770e" />
-                  <Text style={styles.infoLabel}>Ubicación</Text>
+                  <FontAwesome name="road" size={20} color="#b9770e" />
+                  <Text style={styles.infoLabel}>Calle</Text>
                 </View>
-                <Text style={styles.infoValue}>{empleado.ubicacion || 'No registrada'}</Text>
+                <Text style={styles.infoValue}>{empleado.calle || 'No registrada'}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoLeft}>
+                  <FontAwesome name="home" size={20} color="#b9770e" />
+                  <Text style={styles.infoLabel}>Número</Text>
+                </View>
+                <Text style={styles.infoValue}>{empleado.numeroDomicilio || 'No registrado'}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoLeft}>
+                  <FontAwesome name="map" size={20} color="#b9770e" />
+                  <Text style={styles.infoLabel}>Domicilio Completo</Text>
+                </View>
+                <Text style={styles.infoValue}>{getDomicilioCompleto()}</Text>
               </View>
             </View>
 

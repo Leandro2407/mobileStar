@@ -1,44 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  ScrollView,
-  Modal,
-  StatusBar,
-  ImageBackground,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Modal } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '../src/config/firebaseConfig';
+import { auth, db } from '../config/firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
-import CustomAlert from '../src/components/CustomAlert';
+import { signOut } from 'firebase/auth';
+import CustomAlert from './CustomAlert';
 import * as Font from 'expo-font';
 
-const GTH_LOGO = require('../assets/logo.png');
-const BACKGROUND_IMAGE = require('../assets/home.jpg');
+const GTH_LOGO = require('../../assets/logo.png');
 
-export default function Home({ navigation }) {
+export default function NavBar({ navigation, currentScreen = 'Home' }) {
   const [menuVisible, setMenuVisible] = useState(false);
-  const [logoutAlertVisible, setLogoutAlertVisible] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [logoutAlertVisible, setLogoutAlertVisible] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
+  const [activeScreen, setActiveScreen] = useState(currentScreen);
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState('Home');
-
-  // Ref para el ScrollView
-  const scrollViewRef = useRef(null);
 
   useEffect(() => {
     async function loadFonts() {
       await Font.loadAsync({
-        'Pacifico': require('../assets/fonts/Pacifico-Regular.ttf'),
-        'PTSerif-Regular': require('../assets/fonts/PTSerif-Regular.ttf'),
+        'Pacifico': require('../../assets/fonts/Pacifico-Regular.ttf'),
+        'PTSerif-Regular': require('../../assets/fonts/PTSerif-Regular.ttf'),
       });
       setFontsLoaded(true);
     }
@@ -47,17 +31,8 @@ export default function Home({ navigation }) {
 
   useEffect(() => {
     loadProfileImage();
-    // Actualizar la imagen y resetear scroll cuando el usuario regrese a esta pantalla
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadProfileImage();
-      setCurrentScreen('Home');
-      // Resetear el scroll al inicio cuando vuelves a la pantalla
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 0, animated: false });
-      }
-    });
-    return unsubscribe;
-  }, [navigation]);
+    setActiveScreen(currentScreen);
+  }, [currentScreen]);
 
   const loadProfileImage = async () => {
     const user = auth.currentUser;
@@ -71,7 +46,13 @@ export default function Home({ navigation }) {
         console.log('Error cargando imagen:', error);
       }
     }
-    setLoading(false);
+  };
+
+  const getInitials = () => {
+    const user = auth.currentUser;
+    if (!user?.displayName) return 'US';
+    const names = user.displayName.split(' ');
+    return names[0][0].toUpperCase();
   };
 
   const showAlert = (title, message) => {
@@ -98,39 +79,35 @@ export default function Home({ navigation }) {
     setLogoutAlertVisible(true);
   };
 
-  const getInitials = () => {
-    const user = auth.currentUser;
-    if (!user?.displayName) return 'US';
-    const names = user.displayName.split(' ');
-    return names[0][0].toUpperCase();
+  const navigateTo = (screen) => {
+    setActiveScreen(screen);
+    setMenuVisible(false);
+    navigation.navigate(screen);
   };
-
-  const DashboardCard = ({ icon, title, color, onPress }) => (
-    <TouchableOpacity style={styles.dashboardCard} onPress={onPress}>
-      <View style={[styles.cardIconContainer, { backgroundColor: color }]}>
-        <FontAwesome name={icon} size={35} color="#FFF" />
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-    </TouchableOpacity>
-  );
 
   if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      {/* Navbar */}
+    <>
       <View style={styles.navbar}>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setMenuVisible(true)}>
-          <FontAwesome name="bars" size={24} color="#FFF" />
+        <TouchableOpacity 
+          style={styles.menuButton} 
+          onPress={() => setMenuVisible(true)}
+        >
+          <FontAwesome name="bars" size={24} color="#FFFFFF" />
         </TouchableOpacity>
+        
         <View style={styles.titleContainer}>
-          <Text style={styles.gthText}>GTH </Text>
-          <Text style={styles.appText}>App</Text>
+          <Text style={styles.gthText}>GTH</Text>
+          <Text style={styles.appText}> App</Text>
         </View>
-        <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Profile')}>
+
+        <TouchableOpacity 
+          style={styles.profileButton} 
+          onPress={() => navigateTo('Profile')}
+        >
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.profileImage} />
           ) : (
@@ -140,96 +117,135 @@ export default function Home({ navigation }) {
           )}
         </TouchableOpacity>
       </View>
-      {/* Contenido */}
-      <ImageBackground source={BACKGROUND_IMAGE} style={styles.backgroundImage} resizeMode="cover">
-        <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>Bienvenido</Text>
-            <Text style={styles.welcomeSubtext}>¿Qué deseas hacer hoy?</Text>
-          </View>
-          <View style={styles.cardsContainer}>
-            <DashboardCard
-              icon="users"
-              title="Empleados"
-              color="#b9770e"
-              onPress={() => navigation.navigate('Empleados')}
-            />
-            {/* Elimina la Card relacionada a CreateTask */}
-          </View>
-        </ScrollView>
-      </ImageBackground>
+
       {/* Menú lateral */}
       <Modal
         visible={menuVisible}
-        animationType="fade"
-        transparent
+        transparent={true}
+        animationType="slide"
         onRequestClose={() => setMenuVisible(false)}
       >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
           <View style={styles.sideMenu}>
             <View style={styles.menuHeader}>
-              <Image source={GTH_LOGO} style={styles.menuLogo} />
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.menuLogo} />
+              ) : (
+                <Image source={GTH_LOGO} style={styles.menuLogo} />
+              )}
               <Text style={styles.menuTitle}>GTH Negocios</Text>
               <Text style={styles.menuSubtitle}>Inmobiliarios</Text>
               <Text style={styles.userEmail}>{auth.currentUser?.email}</Text>
             </View>
+
             <View style={styles.menuItems}>
-              <TouchableOpacity
-                style={[styles.menuItem, currentScreen === 'Home' && styles.menuItemSelected]}
-                onPress={() => {
-                  setCurrentScreen('Home');
-                  setMenuVisible(false);
-                }}
+              <TouchableOpacity 
+                style={[
+                  styles.menuItem,
+                  activeScreen === 'Home' && styles.menuItemSelected
+                ]}
+                onPress={() => navigateTo('Home')}
               >
-                <FontAwesome name="home" size={20} color="#FFF" />
-                <Text style={[styles.menuItemText, currentScreen === 'Home' && styles.menuItemTextSelected]}>Inicio</Text>
+                <FontAwesome 
+                  name="home" 
+                  size={20} 
+                  color={activeScreen === 'Home' ? '#FFFFFF' : '#b9770e'} 
+                />
+                <Text style={[
+                  styles.menuItemText,
+                  activeScreen === 'Home' && styles.menuItemTextSelected
+                ]}>
+                  Inicio
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.menuItem, currentScreen === 'Profile' && styles.menuItemSelected]}
-                onPress={() => {
-                  setCurrentScreen('Profile');
-                  setMenuVisible(false);
-                  navigation.navigate('Profile');
-                }}
+
+              <TouchableOpacity 
+                style={[
+                  styles.menuItem,
+                  activeScreen === 'Profile' && styles.menuItemSelected
+                ]}
+                onPress={() => navigateTo('Profile')}
               >
-                <FontAwesome name="user" size={20} color="#FFF" />
-                <Text style={[styles.menuItemText, currentScreen === 'Profile' && styles.menuItemTextSelected]}>Perfil</Text>
+                <FontAwesome 
+                  name="user-circle" 
+                  size={20} 
+                  color={activeScreen === 'Profile' ? '#FFFFFF' : '#b9770e'} 
+                />
+                <Text style={[
+                  styles.menuItemText,
+                  activeScreen === 'Profile' && styles.menuItemTextSelected
+                ]}>
+                  Perfil
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.menuItem, currentScreen === 'Ayuda' && styles.menuItemSelected]}
-                onPress={() => {
-                  setCurrentScreen('Ayuda');
-                  setMenuVisible(false);
-                  navigation.navigate('Ayuda');
-                }}
+
+              <TouchableOpacity 
+                style={[
+                  styles.menuItem,
+                  activeScreen === 'Ayuda' && styles.menuItemSelected
+                ]}
+                onPress={() => navigateTo('Ayuda')}
               >
-                <FontAwesome name="question-circle" size={20} color="#FFF" />
-                <Text style={[styles.menuItemText, currentScreen === 'Ayuda' && styles.menuItemTextSelected]}>Ayuda</Text>
+                <FontAwesome 
+                  name="question-circle" 
+                  size={20} 
+                  color={activeScreen === 'Ayuda' ? '#FFFFFF' : '#b9770e'} 
+                />
+                <Text style={[
+                  styles.menuItemText,
+                  activeScreen === 'Ayuda' && styles.menuItemTextSelected
+                ]}>
+                  Ayuda
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.menuItem, currentScreen === 'AcercaDe' && styles.menuItemSelected]}
-                onPress={() => {
-                  setCurrentScreen('AcercaDe');
-                  setMenuVisible(false);
-                  navigation.navigate('AcercaDe');
-                }}
+
+              <TouchableOpacity 
+                style={[
+                  styles.menuItem,
+                  activeScreen === 'AcercaDe' && styles.menuItemSelected
+                ]}
+                onPress={() => navigateTo('AcercaDe')}
               >
-                <FontAwesome name="info-circle" size={20} color="#FFF" />
-                <Text style={[styles.menuItemText, currentScreen === 'AcercaDe' && styles.menuItemTextSelected]}>Acerca de</Text>
+                <FontAwesome 
+                  name="info-circle" 
+                  size={20} 
+                  color={activeScreen === 'AcercaDe' ? '#FFFFFF' : '#b9770e'} 
+                />
+                <Text style={[
+                  styles.menuItemText,
+                  activeScreen === 'AcercaDe' && styles.menuItemTextSelected
+                ]}>
+                  Acerca de
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.menuItem, currentScreen === 'Configuracion' && styles.menuItemSelected]}
-                onPress={() => {
-                  setCurrentScreen('Configuracion');
-                  setMenuVisible(false);
-                  navigation.navigate('Configuracion');
-                }}
+
+              <TouchableOpacity 
+                style={[
+                  styles.menuItem,
+                  activeScreen === 'Configuracion' && styles.menuItemSelected
+                ]}
+                onPress={() => navigateTo('Configuracion')}
               >
-                <FontAwesome name="cog" size={20} color="#FFF" />
-                <Text style={[styles.menuItemText, currentScreen === 'Configuracion' && styles.menuItemTextSelected]}>Configuración</Text>
+                <FontAwesome 
+                  name="cog" 
+                  size={20} 
+                  color={activeScreen === 'Configuracion' ? '#FFFFFF' : '#b9770e'} 
+                />
+                <Text style={[
+                  styles.menuItemText,
+                  activeScreen === 'Configuracion' && styles.menuItemTextSelected
+                ]}>
+                  Configuración
+                </Text>
               </TouchableOpacity>
+
               <View style={styles.menuDivider} />
-              <TouchableOpacity
+
+              <TouchableOpacity 
                 style={[styles.menuItem, styles.logoutItem]}
                 onPress={handleLogOutRequest}
               >
@@ -240,26 +256,29 @@ export default function Home({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
+
       {/* Alerta de confirmación de cierre de sesión */}
       <Modal
         visible={logoutAlertVisible}
+        transparent={true}
         animationType="fade"
-        transparent
         onRequestClose={() => setLogoutAlertVisible(false)}
       >
         <View style={styles.alertOverlay}>
           <View style={styles.alertBox}>
-            <FontAwesome name="exclamation-circle" size={40} color="#e74c3c" style={styles.alertIcon} />
+            <FontAwesome name="exclamation-circle" size={50} color="#f39c12" style={styles.alertIcon} />
             <Text style={styles.alertTitle}>Cerrar sesión</Text>
             <Text style={styles.alertMessage}>¿Está seguro que desea cerrar sesión?</Text>
+            
             <View style={styles.alertButtons}>
-              <TouchableOpacity
+              <TouchableOpacity 
                 style={[styles.alertButton, styles.cancelButton]}
                 onPress={() => setLogoutAlertVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              
+              <TouchableOpacity 
                 style={[styles.alertButton, styles.confirmButton]}
                 onPress={handleLogOutConfirm}
               >
@@ -269,32 +288,18 @@ export default function Home({ navigation }) {
           </View>
         </View>
       </Modal>
-      {/* Alerta general */}
-      <CustomAlert
+
+      <CustomAlert 
         visible={alertVisible}
         title={alertConfig.title}
         message={alertConfig.message}
         onClose={() => setAlertVisible(false)}
       />
-      {loading && (
-        <View style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <ActivityIndicator size="large" color="#b9770e" />
-        </View>
-      )}
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -308,10 +313,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     zIndex: 10,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
   },
   menuButton: {
     padding: 8,
@@ -355,70 +356,6 @@ const styles = StyleSheet.create({
     color: '#b9770e',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  mainContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 15,
-    paddingBottom: 30,
-  },
-  welcomeSection: {
-    marginTop: 30,
-    marginBottom: 30,
-    alignItems: 'center',
-  },
-  welcomeText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 5,
-  },
-  welcomeSubtext: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    marginTop: 8,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  cardsContainer: {
-    flex: 1,
-  },
-  dashboardCard: {
-    backgroundColor: 'rgba(26, 26, 26, 0.4)',
-    borderRadius: 15,
-    padding: 25,
-    marginBottom: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    borderWidth: 2,
-  },
-  cardIconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 20,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
   },
   modalOverlay: {
     flex: 1,

@@ -15,7 +15,6 @@ import { FontAwesome } from '@expo/vector-icons';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig';
 import CustomAlert from '../src/components/CustomAlert';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 
 const BACKGROUND_IMAGE = require('../assets/signup.jpg');
@@ -27,7 +26,7 @@ export default function AddEmpleado({ navigation }) {
   const [telefono, setTelefono] = useState('');
   const [puesto, setPuesto] = useState('');
   const [fechaIngreso, setFechaIngreso] = useState('');
-  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [dni, setDni] = useState('');
   const [barrio, setBarrio] = useState('');
   const [calle, setCalle] = useState('');
   const [numeroDomicilio, setNumeroDomicilio] = useState('');
@@ -35,10 +34,6 @@ export default function AddEmpleado({ navigation }) {
   const [profileImage, setProfileImage] = useState(null);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
-  
-  // Estados para el DatePicker
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Establecer la fecha de ingreso automáticamente al cargar el componente
   useEffect(() => {
@@ -57,13 +52,10 @@ export default function AddEmpleado({ navigation }) {
     setter(filteredText);
   };
 
-  const handleDateChange = (event, date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setSelectedDate(date);
-      const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-      setFechaNacimiento(formattedDate);
-    }
+  const handleDniInput = (text) => {
+    // Solo permite números y máximo 9 caracteres
+    const filteredText = text.replace(/[^0-9]/g, '').slice(0, 9);
+    setDni(filteredText);
   };
 
   const pickImage = async () => {
@@ -120,7 +112,7 @@ export default function AddEmpleado({ navigation }) {
         telefono: telefono.trim() || '',
         puesto: puesto.trim() || '',
         fechaIngreso: fechaIngreso,
-        fechaNacimiento: fechaNacimiento.trim() || '',
+        dni: dni.trim() || '',
         barrio: barrio.trim() || '',
         calle: calle.trim() || '',
         numeroDomicilio: numeroDomicilio.trim() || '',
@@ -197,6 +189,20 @@ export default function AddEmpleado({ navigation }) {
               />
             </View>
 
+            {/* DNI */}
+            <View style={styles.inputGroup}>
+              <FontAwesome name="id-card" size={20} color="#CCCCCC" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                placeholder="DNI (máx. 9 dígitos)"
+                placeholderTextColor="#999999"
+                keyboardType="numeric"
+                value={dni}
+                onChangeText={handleDniInput}
+                maxLength={9}
+              />
+            </View>
+
             {/* Email */}
             <View style={styles.inputGroup}>
               <FontAwesome name="envelope" size={20} color="#CCCCCC" style={styles.icon} />
@@ -244,31 +250,6 @@ export default function AddEmpleado({ navigation }) {
                 <Text style={styles.autoDateValue}>{fechaIngreso}</Text>
               </View>
             </View>
-
-            {/* Fecha de Nacimiento con Calendar Picker */}
-            <TouchableOpacity 
-              style={styles.inputGroup}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <FontAwesome name="birthday-cake" size={20} color="#CCCCCC" style={styles.icon} />
-              <View style={styles.datePickerButton}>
-                <Text style={fechaNacimiento ? styles.datePickerTextFilled : styles.datePickerText}>
-                  {fechaNacimiento || 'Fecha de Nacimiento (Tocar para seleccionar)'}
-                </Text>
-              </View>
-              <FontAwesome name="calendar" size={18} color="#b9770e" />
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
-                maximumDate={new Date()}
-                textColor="#FFFFFF"
-              />
-            )}
 
             {/* Sección de Domicilio */}
             <Text style={styles.subsectionTitle}>Domicilio</Text>
@@ -486,19 +467,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#27ae60',
     fontWeight: 'bold',
-  },
-  datePickerButton: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  datePickerText: {
-    color: '#999999',
-    fontSize: 16,
-  },
-  datePickerTextFilled: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
   },
   button: {
     flexDirection: 'row',

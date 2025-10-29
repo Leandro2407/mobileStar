@@ -100,7 +100,7 @@ export default function Login({ navigation }) {
   };
 
   const handleForgotPassword = () => {
-    showAlert("Función pendiente", "Implementaremos la recuperación de contraseña pronto");
+    navigation.navigate('ForgotPassword');
   };
 
   return (

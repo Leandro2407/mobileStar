@@ -15,7 +15,6 @@ import { FontAwesome } from '@expo/vector-icons';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig';
 import CustomAlert from '../src/components/CustomAlert';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 
 const BACKGROUND_IMAGE = require('../assets/signup.jpg');
@@ -28,7 +27,7 @@ export default function EditEmpleado({ route, navigation }) {
   const [email, setEmail] = useState(empleado.email || '');
   const [telefono, setTelefono] = useState(empleado.telefono || '');
   const [puesto, setPuesto] = useState(empleado.puesto || '');
-  const [fechaNacimiento, setFechaNacimiento] = useState(empleado.fechaNacimiento || '');
+  const [dni, setDni] = useState(empleado.dni || '');
   const [barrio, setBarrio] = useState(empleado.barrio || '');
   const [calle, setCalle] = useState(empleado.calle || '');
   const [numeroDomicilio, setNumeroDomicilio] = useState(empleado.numeroDomicilio || '');
@@ -37,10 +36,6 @@ export default function EditEmpleado({ route, navigation }) {
   const [profileImage, setProfileImage] = useState(empleado.imagen || null);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
-  
-  // Estados para el DatePicker
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const showAlert = (title, message) => {
     setAlertConfig({ title, message });
@@ -52,13 +47,10 @@ export default function EditEmpleado({ route, navigation }) {
     setter(filteredText);
   };
 
-  const handleDateChange = (event, date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setSelectedDate(date);
-      const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-      setFechaNacimiento(formattedDate);
-    }
+  const handleDniInput = (text) => {
+    // Solo permite números y máximo 9 caracteres
+    const filteredText = text.replace(/[^0-9]/g, '').slice(0, 9);
+    setDni(filteredText);
   };
 
   const pickImage = async () => {
@@ -116,7 +108,7 @@ export default function EditEmpleado({ route, navigation }) {
         telefono: telefono.trim() || '',
         puesto: puesto.trim() || '',
         // fechaIngreso NO se actualiza - permanece como está
-        fechaNacimiento: fechaNacimiento.trim() || '',
+        dni: dni.trim() || '',
         barrio: barrio.trim() || '',
         calle: calle.trim() || '',
         numeroDomicilio: numeroDomicilio.trim() || '',
@@ -227,6 +219,20 @@ export default function EditEmpleado({ route, navigation }) {
               />
             </View>
 
+            {/* DNI */}
+            <View style={styles.inputGroup}>
+              <FontAwesome name="id-card" size={20} color="#CCCCCC" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                placeholder="DNI (máx. 9 dígitos)"
+                placeholderTextColor="#999999"
+                keyboardType="numeric"
+                value={dni}
+                onChangeText={handleDniInput}
+                maxLength={9}
+              />
+            </View>
+
             {/* Email */}
             <View style={styles.inputGroup}>
               <FontAwesome name="envelope" size={20} color="#CCCCCC" style={styles.icon} />
@@ -277,31 +283,6 @@ export default function EditEmpleado({ route, navigation }) {
               </View>
               <FontAwesome name="lock" size={16} color="#666666" />
             </View>
-
-            {/* Fecha de Nacimiento con Calendar Picker */}
-            <TouchableOpacity 
-              style={styles.inputGroup}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <FontAwesome name="birthday-cake" size={20} color="#CCCCCC" style={styles.icon} />
-              <View style={styles.datePickerButton}>
-                <Text style={fechaNacimiento ? styles.datePickerTextFilled : styles.datePickerText}>
-                  {fechaNacimiento || 'Fecha de Nacimiento (Tocar para seleccionar)'}
-                </Text>
-              </View>
-              <FontAwesome name="calendar" size={18} color="#b9770e" />
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
-                maximumDate={new Date()}
-                textColor="#FFFFFF"
-              />
-            )}
 
             {/* Sección de Domicilio */}
             <Text style={styles.subsectionTitle}>Domicilio</Text>
@@ -568,19 +549,6 @@ const styles = StyleSheet.create({
   lockedDateValue: {
     fontSize: 16,
     color: '#999999',
-    fontWeight: '500',
-  },
-  datePickerButton: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  datePickerText: {
-    color: '#999999',
-    fontSize: 16,
-  },
-  datePickerTextFilled: {
-    color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: '500',
   },
   button: {

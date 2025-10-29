@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Image,
   ActivityIndicator,
   ImageBackground,
@@ -15,8 +14,9 @@ import { auth, db } from '../src/config/firebaseConfig';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { FontAwesome } from '@expo/vector-icons';
 import CustomAlert from '../src/components/CustomAlert';
+import NavBar from '../src/components/NavBar';
 
-const Profile = ({ navigation }) => {
+export default function Profile({ navigation }) {
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +89,7 @@ const Profile = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error al seleccionar imagen:', error);
-      showAlert('', 'No se pudo seleccionar la imagen');
+      showAlert('Error', 'No se pudo seleccionar la imagen');
     }
   };
 
@@ -108,98 +108,109 @@ const Profile = ({ navigation }) => {
   }
 
   return (
-    <ImageBackground 
-      source={require('../assets/fondo-perfil.jpg')}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      {/* Overlay oscuro para mejorar legibilidad */}
-      <View style={styles.overlay} />
+    <View style={styles.container}>
+      <NavBar navigation={navigation} currentScreen="Profile" />
       
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ImageBackground 
+        source={require('../assets/fondo-perfil.jpg')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        {/* Overlay oscuro para mejorar legibilidad */}
+        <View style={styles.overlay} />
         
-        {/* Header con foto de perfil */}
-        <View style={styles.header}>
-          <View style={styles.profileContainer}>
-            <TouchableOpacity style={styles.profileTouchable} onPress={pickImage}>
-              {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.initialsCircle}>
-                  <Text style={styles.initials}>{getInitials()}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
-              <FontAwesome name="camera" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          
+          {/* Header con foto de perfil */}
+          <View style={styles.header}>
+            <View style={styles.profileContainer}>
+              <TouchableOpacity style={styles.profileTouchable} onPress={pickImage}>
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.initialsCircle}>
+                    <Text style={styles.initials}>{getInitials()}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                <FontAwesome name="camera" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.name}>{user?.displayName || 'Usuario'}</Text>
+            <Text style={styles.email}>{user?.email || 'usuario@email.com'}</Text>
           </View>
 
-          <Text style={styles.name}>{user?.displayName || 'Usuario'}</Text>
-          <Text style={styles.email}>{user?.email || 'usuario@email.com'}</Text>
-        </View>
-
-        {/* Opciones de menú */}
-        <View style={styles.menuContainer}>
-          <TouchableOpacity 
-            style={styles.menuOption}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.iconContainer}>
-                <FontAwesome name="user" size={22} color="#b9770e" />
+          {/* Opciones de menú */}
+          <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuOption}
+              onPress={() => navigation.navigate('EditProfile')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={styles.iconContainer}>
+                  <FontAwesome name="user" size={22} color="#b9770e" />
+                </View>
+                <Text style={styles.menuText}>Ver perfil</Text>
               </View>
-              <Text style={styles.menuText}>Ver perfil</Text>
-            </View>
-            <FontAwesome name="chevron-right" size={20} color="#b9770e" />
-          </TouchableOpacity>
+              <FontAwesome name="chevron-right" size={20} color="#b9770e" />
+            </TouchableOpacity>
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <TouchableOpacity 
-            style={styles.menuOption}
-            onPress={() => navigation.navigate('EditInformation')}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.iconContainer}>
-                <FontAwesome name="edit" size={22} color="#b9770e" />
+            <TouchableOpacity 
+              style={styles.menuOption}
+              onPress={() => navigation.navigate('EditInformation')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={styles.iconContainer}>
+                  <FontAwesome name="edit" size={22} color="#b9770e" />
+                </View>
+                <Text style={styles.menuText}>Editar información</Text>
               </View>
-              <Text style={styles.menuText}>Editar información</Text>
-            </View>
-            <FontAwesome name="chevron-right" size={20} color="#b9770e" />
-          </TouchableOpacity>
+              <FontAwesome name="chevron-right" size={20} color="#b9770e" />
+            </TouchableOpacity>
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <TouchableOpacity 
-            style={styles.menuOption}
-            onPress={() => navigation.navigate('ChangePassword')}
-          >
-            <View style={styles.menuLeft}>
-              <View style={styles.iconContainer}>
-                <FontAwesome name="lock" size={22} color="#b9770e" />
+            <TouchableOpacity 
+              style={styles.menuOption}
+              onPress={() => navigation.navigate('ChangePassword')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={styles.iconContainer}>
+                  <FontAwesome name="lock" size={22} color="#b9770e" />
+                </View>
+                <Text style={styles.menuText}>Cambiar contraseña</Text>
               </View>
-              <Text style={styles.menuText}>Cambiar contraseña</Text>
-            </View>
-            <FontAwesome name="chevron-right" size={20} color="#b9770e" />
-          </TouchableOpacity>
-        </View>
-        
-      </ScrollView>
+              <FontAwesome name="chevron-right" size={20} color="#b9770e" />
+            </TouchableOpacity>
+          </View>
+          
+        </ScrollView>
 
-      <CustomAlert
-        visible={alertVisible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        onClose={() => setAlertVisible(false)}
-      />
-    </ImageBackground>
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={() => setAlertVisible(false)}
+        />
+      </ImageBackground>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  backgroundImage: {
     flex: 1,
   },
   overlay: {
@@ -328,5 +339,3 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
 });
-
-export default Profile;

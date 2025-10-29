@@ -7,8 +7,8 @@ import { auth } from '../src/config/firebaseConfig';
 import InitialScreen from '../screens/InitialScreen';
 import Login from '../screens/Login';
 import SignUp from '../screens/SignUp';
+import ForgotPassword from '../screens/ForgotPassword';
 import Home from '../screens/Home';
-import CreateTask from '../screens/CreateTask';
 import Profile from '../screens/Profile';
 import EditProfile from '../screens/EditProfile';
 import EditInformation from '../screens/EditInformation';
@@ -17,6 +17,9 @@ import EmpleadosScreen from '../screens/EmpleadosList';
 import EmpleadoProfile from '../screens/EmpleadoProfile';
 import AddEmpleado from '../screens/AddEmpleado';
 import EditEmpleado from '../screens/EditEmpleado';
+import Ayuda from '../screens/Ayuda';
+import AcercaDe from '../screens/AcercaDe';
+import Configuracion from '../screens/Configuracion';
 
 const Stack = createStackNavigator();
 
@@ -62,6 +65,11 @@ function Navigation() {
             headerShown: false,
             gestureEnabled: false,
           }}
+        />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPassword}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="Home"
@@ -206,6 +214,22 @@ function Navigation() {
               color: '#fff'
             }
           }}
+        />
+        {/* NUEVAS PANTALLAS */}
+        <Stack.Screen
+          name="Ayuda"
+          component={Ayuda}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AcercaDe"
+          component={AcercaDe}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Configuracion"
+          component={Configuracion}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
