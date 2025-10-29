@@ -40,7 +40,11 @@ export default function Ayuda({ navigation }) {
         style={styles.backgroundImage}
         imageStyle={{ opacity: 0.3 }}
       >
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <FontAwesome name="question-circle" size={60} color="#b9770e" />
             <Text style={styles.headerTitle}>Centro de Ayuda</Text>
@@ -64,12 +68,6 @@ export default function Ayuda({ navigation }) {
               icon="lock"
               title="Seguridad"
               description="Cambiar contraseña y configuración de seguridad"
-            />
-
-            <HelpCard
-              icon="cog"
-              title="Configuración"
-              description="Personaliza tu experiencia en la aplicación"
             />
           </View>
 

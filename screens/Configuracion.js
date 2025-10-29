@@ -13,7 +13,6 @@ import NavBar from '../src/components/NavBar';
 import CustomAlert from '../src/components/CustomAlert';
 
 const BACKGROUND_IMAGE = require('../assets/home.jpg');
-const GTH_LOGO = require('../assets/logo.png');
 
 export default function Configuracion({ navigation }) {
   const [notificaciones, setNotificaciones] = useState(true);
@@ -75,7 +74,11 @@ export default function Configuracion({ navigation }) {
         style={styles.backgroundImage}
         imageStyle={{ opacity: 0.3 }}
       >
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <FontAwesome name="cog" size={60} color="#b9770e" />
             <Text style={styles.headerTitle}>Configuración</Text>

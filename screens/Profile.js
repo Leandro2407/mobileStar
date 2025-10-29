@@ -33,7 +33,6 @@ export default function Profile({ navigation }) {
     return unsubscribe;
   }, []);
 
-  // Cargar imagen de perfil desde Firestore
   const loadProfileImage = async (uid) => {
     setLoading(true);
     try {
@@ -77,7 +76,6 @@ export default function Profile({ navigation }) {
         const imageUri = result.assets[0].uri;
         setProfileImage(imageUri);
         
-        // Guardar en Firestore
         if (user) {
           await setDoc(doc(db, 'users', user.uid), {
             profileImage: imageUri,
@@ -116,15 +114,12 @@ export default function Profile({ navigation }) {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        {/* Overlay oscuro para mejorar legibilidad */}
         <View style={styles.overlay} />
         
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          
-          {/* Header con foto de perfil */}
           <View style={styles.header}>
             <View style={styles.profileContainer}>
               <TouchableOpacity style={styles.profileTouchable} onPress={pickImage}>
@@ -146,7 +141,6 @@ export default function Profile({ navigation }) {
             <Text style={styles.email}>{user?.email || 'usuario@email.com'}</Text>
           </View>
 
-          {/* Opciones de menú */}
           <View style={styles.menuContainer}>
             <TouchableOpacity 
               style={styles.menuOption}

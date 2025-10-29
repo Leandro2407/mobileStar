@@ -14,45 +14,39 @@ const BACKGROUND_IMAGE = require('../assets/home.jpg');
 const GTH_LOGO = require('../assets/logo.png');
 
 export default function AcercaDe({ navigation }) {
-  const InfoCard = ({ icon, title, value }) => (
-    <View style={styles.infoCard}>
-      <View style={styles.infoIconContainer}>
-        <FontAwesome name={icon} size={28} color="#b9770e" />
-      </View>
-      <View style={styles.infoContent}>
-        <Text style={styles.infoTitle}>{title}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
-      <NavBar navigation={navigation} />
-      <ImageBackground source={BACKGROUND_IMAGE} style={styles.backgroundImage} resizeMode="cover">
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <NavBar navigation={navigation} currentScreen="AcercaDe" />
+      
+      <ImageBackground 
+        source={BACKGROUND_IMAGE} 
+        style={styles.backgroundImage} 
+        resizeMode="cover"
+      >
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.logoContainer}>
             <Image source={GTH_LOGO} style={styles.logo} />
             <Text style={styles.appName}>GTH App</Text>
             <Text style={styles.appSlogan}>Gestión de Empleados</Text>
           </View>
+
           <View style={styles.descriptionCard}>
             <Text style={styles.descriptionTitle}>Sobre la Aplicación</Text>
             <Text style={styles.descriptionText}>
-              GTH App es una solución integral diseñada para optimizar la gestión de empleados
-              y tareas en empresas inmobiliarias. Nuestra plataforma facilita la organización,
-              seguimiento y administración de tu equipo de trabajo.
+              GTH App es una solución integral diseñada para optimizar la gestión de empleados en empresas inmobiliarias. 
+              Nuestra plataforma facilita la organización, seguimiento y administración de tu equipo de trabajo.
             </Text>
           </View>
+
           <View style={styles.featuresCard}>
             <Text style={styles.featuresTitle}>Características Principales</Text>
             <View style={styles.featureItem}>
               <FontAwesome name="check-circle" size={18} color="#b9770e" />
               <Text style={styles.featureText}>Gestión completa de empleados</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <FontAwesome name="check-circle" size={18} color="#b9770e" />
-              <Text style={styles.featureText}>Creación y asignación de tareas</Text>
             </View>
             <View style={styles.featureItem}>
               <FontAwesome name="check-circle" size={18} color="#b9770e" />
@@ -63,6 +57,7 @@ export default function AcercaDe({ navigation }) {
               <Text style={styles.featureText}>Interfaz intuitiva y moderna</Text>
             </View>
           </View>
+
           <View style={styles.footerCard}>
             <Text style={styles.footerText}>© 2025 GTH Negocios Inmobiliarios</Text>
             <Text style={styles.footerSubtext}>Todos los derechos reservados</Text>
@@ -132,41 +127,6 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     lineHeight: 22,
     textAlign: 'justify',
-  },
-  infoSection: {
-    marginBottom: 20,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.9)',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  infoIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(185, 119, 14, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 12,
-    color: '#999999',
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   featuresCard: {
     backgroundColor: 'rgba(26, 26, 26, 0.9)',

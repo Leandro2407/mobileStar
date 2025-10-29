@@ -79,27 +79,10 @@ function Navigation() {
           }}
         />
         <Stack.Screen
-          name="CreateTask"
-          component={CreateTask}
-          options={{
-            headerShown: false,
-          }}
-        />
-      
-        <Stack.Screen
           name="Profile"
           component={Profile}
           options={{ 
-            title: 'Mi Perfil',
-            headerShown: true,
-            headerStyle: {
-              backgroundColor: '#000000',
-            },
-            headerTintColor: '#fff',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-              color: '#fff'
-            }
+            headerShown: false
           }}
         />
         <Stack.Screen
@@ -182,7 +165,6 @@ function Navigation() {
             }
           }}
         />
-        {/* NUEVAS RUTAS PARA GESTIÓN DE EMPLEADOS */}
         <Stack.Screen
           name="AddEmpleado"
           component={AddEmpleado}
@@ -215,7 +197,6 @@ function Navigation() {
             }
           }}
         />
-        {/* NUEVAS PANTALLAS */}
         <Stack.Screen
           name="Ayuda"
           component={Ayuda}
