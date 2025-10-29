@@ -18,8 +18,6 @@ import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
 import { updateProfile } from 'firebase/auth';
 import CustomAlert from '../src/components/CustomAlert';
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "../src/config/firebaseConfig";
 
 const GTH_LOGO = require('../assets/logo.png');
 const SIGNUP_BACKGROUND_IMAGE = require('../assets/signup.jpg');
@@ -112,23 +110,6 @@ export default function SignUp({ navigation }) {
         displayName: `${firstName} ${lastName}`
       });
 
-      // Guardar datos del empleado en Firestore
-      await setDoc(doc(db, "empleados", response.user.uid), {
-        nombre: firstName.trim(),
-        apellido: lastName.trim(),
-        email: email.trim(),
-        activo: true,
-        fechaIngreso: new Date().toISOString().split('T')[0],
-        telefono: "",
-        puesto: "",
-        fechaNacimiento: "",
-        ubicacion: "",
-        tareasCompletadas: 0,
-        tareasAsignadas: 0,
-        notas: "",
-        imagen: ""
-      });
-
       // Cerrar sesión inmediatamente después del registro
       await signOut(auth);
       
@@ -162,12 +143,6 @@ export default function SignUp({ navigation }) {
 
   const InfoRequirement = ({ children }) => (
     <Text style={styles.infoText}>
-      {children}
-    </Text>
-  );
-
-  const EmailRequirement = ({ isValid, children }) => (
-    <Text style={[styles.requirementText, isValid ? styles.validRequirement : styles.invalidRequirement]}>
       {children}
     </Text>
   );

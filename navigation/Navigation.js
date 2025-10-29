@@ -15,6 +15,8 @@ import EditInformation from '../screens/EditInformation';
 import ChangePassword from '../screens/ChangePassword';
 import EmpleadosScreen from '../screens/EmpleadosList';
 import EmpleadoProfile from '../screens/EmpleadoProfile';
+import AddEmpleado from '../screens/AddEmpleado';
+import EditEmpleado from '../screens/EditEmpleado';
 
 const Stack = createStackNavigator();
 
@@ -166,6 +168,39 @@ function Navigation() {
               backgroundColor: '#000000',
             },
             headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              color: '#fff'
+            }
+          }}
+        />
+        {/* NUEVAS RUTAS PARA GESTIÓN DE EMPLEADOS */}
+        <Stack.Screen
+          name="AddEmpleado"
+          component={AddEmpleado}
+          options={{ 
+            title: 'Agregar Empleado',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#000000',
+            },
+            headerTintColor: '#b9770e',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              color: '#fff'
+            }
+          }}
+        />
+        <Stack.Screen
+          name="EditEmpleado"
+          component={EditEmpleado}
+          options={{ 
+            title: 'Editar Empleado',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#000000',
+            },
+            headerTintColor: '#b9770e',
             headerTitleStyle: {
               fontWeight: 'bold',
               color: '#fff'
