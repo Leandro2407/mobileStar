@@ -101,7 +101,16 @@ const ChangePassword = ({ navigation }) => {
   // FIX: Esta función ahora navega correctamente a la pantalla anterior
   const handleBackConfirm = () => {
     setConfirmBackVisible(false);
-    navigation.goBack(); // Vuelve a la pantalla de Perfil
+    // Reiniciar los campos para que el listener no bloquee la navegación
+    setPasswords({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    // Usar setTimeout para asegurar que el estado se actualiza antes de navegar
+    setTimeout(() => {
+      navigation.goBack();
+    }, 0);
   };
 
   const PasswordRequirement = ({ isValid, children }) => (
@@ -270,7 +279,7 @@ const ChangePassword = ({ navigation }) => {
               
               <TouchableOpacity 
                 style={[styles.alertButton, styles.confirmButton]}
-                onPress={handleBackConfirm} // <-- CORRECCIÓN APLICADA
+                onPress={handleBackConfirm}
               >
                 <Text style={styles.confirmButtonText}>Aceptar</Text>
               </TouchableOpacity>
