@@ -159,8 +159,8 @@ export default function Home({ navigation }) {
               icon="users"
               title="Empleados"
               color="#3498db"
-              onPress={() => navigation.navigate('Empleados')}
-            />
+              onPress={() => navigation.navigate('Empleados')} 
+/>
             <DashboardCard 
               icon="tasks"
               title="Tareas"
