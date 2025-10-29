@@ -110,6 +110,7 @@ export default function EmpleadosList({ navigation }) {
                 apellido={item.apellido}
                 imagen={item.imagen}
                 activo={item.activo}
+                telefono={item.telefono}
               />
             </TouchableOpacity>
             

@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { FontAwesome } from '@expo/vector-icons';
 
-export default function EmpleadoItem({ nombre, apellido, imagen, activo }) {
+export default function EmpleadoItem({ nombre, apellido, imagen, activo, telefono }) {
   return (
     <View style={styles.card}>
       <View style={styles.imageContainer}>
@@ -19,6 +19,16 @@ export default function EmpleadoItem({ nombre, apellido, imagen, activo }) {
         <Text style={styles.nombre}>
           {nombre} {apellido}
         </Text>
+        
+        {/* Teléfono debajo del nombre */}
+        {telefono ? (
+          <View style={styles.telefonoContainer}>
+            <FontAwesome name="phone" size={12} color="#999" />
+            <Text style={styles.telefono}>{telefono}</Text>
+          </View>
+        ) : (
+          <Text style={styles.telefonoVacio}>Sin teléfono</Text>
+        )}
         
         <View style={styles.statusContainer}>
           <View style={[styles.statusDot, { backgroundColor: activo ? "#27ae60" : "#e74c3c" }]} />
@@ -76,7 +86,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: '#fff',
-    marginBottom: 5,
+    marginBottom: 4,
+  },
+  telefonoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  telefono: {
+    fontSize: 13,
+    color: '#999',
+    marginLeft: 6,
+  },
+  telefonoVacio: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 6,
   },
   statusContainer: {
     flexDirection: 'row',
